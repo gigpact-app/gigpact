@@ -1,0 +1,314 @@
+{
+  "contractName": "GigPactAccepted",
+  "constructorInputs": [
+    {
+      "name": "pkV",
+      "type": "pubkey"
+    },
+    {
+      "name": "pkW",
+      "type": "pubkey"
+    },
+    {
+      "name": "lockV",
+      "type": "bytes"
+    },
+    {
+      "name": "lockW",
+      "type": "bytes"
+    },
+    {
+      "name": "requestedLock",
+      "type": "bytes"
+    },
+    {
+      "name": "disputeRefundLock",
+      "type": "bytes"
+    },
+    {
+      "name": "tEnd",
+      "type": "int"
+    },
+    {
+      "name": "tA4",
+      "type": "int"
+    },
+    {
+      "name": "dustSafe",
+      "type": "int"
+    }
+  ],
+  "abi": [
+    {
+      "name": "pay",
+      "inputs": [
+        {
+          "name": "sigV",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "waive",
+      "inputs": [
+        {
+          "name": "sigW",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "inputs": [
+        {
+          "name": "sigW",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "openDispute",
+      "inputs": [
+        {
+          "name": "sigV",
+          "type": "sig"
+        }
+      ]
+    }
+  ],
+  "bytecode": "OP_9 OP_PICK OP_0 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_DUP OP_10 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_10 OP_ROLL OP_ROT OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_4 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_2DROP OP_DROP OP_1 OP_ELSE OP_9 OP_PICK OP_1 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_DUP OP_10 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_10 OP_ROLL OP_3 OP_ROLL OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_3 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_2DROP OP_DROP OP_1 OP_ELSE OP_9 OP_PICK OP_2 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_DUP OP_10 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_7 OP_ROLL OP_CHECKLOCKTIMEVERIFY OP_DROP OP_9 OP_ROLL OP_3 OP_ROLL OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_5 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_2DROP OP_1 OP_ELSE OP_9 OP_ROLL OP_3 OP_NUMEQUALVERIFY OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_DUP OP_10 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_8 OP_ROLL OP_CHECKLOCKTIMEVERIFY OP_DROP OP_8 OP_ROLL OP_ROT OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_6 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_DROP OP_1 OP_ENDIF OP_ENDIF OP_ENDIF",
+  "source": "pragma cashscript ^0.14.0;\n\n// GigPact R-0 - state 2 of 4: ACCEPTED (BCH mode).\n// Paths: A1 pay (employer), A2 waive (worker), A3 claim (worker, time >= T_end),\n//        A4 open dispute (employer, time >= T_A4 = T_end + G).\n// Times only give a lower bound. Spec: Architecture v1.1 sections 2.2, 3.\ncontract GigPactAccepted(\n    pubkey pkV,\n    pubkey pkW,\n    bytes lockV,\n    bytes lockW,\n    bytes requestedLock,       // next state after A3\n    bytes disputeRefundLock,   // next state after A4 (Dispute with phi = 50)\n    int tEnd,                  // T_end, absolute lock time\n    int tA4,                   // T_A4 = T_end + G (G = 7 days), absolute lock time\n    int dustSafe\n) {\n    // A1: employer pays the worker. Output 0 = lockW, value F.\n    function pay(sig sigV) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(F >= dustSafe);\n        require(checkSig(sigV, pkV));\n        require(tx.outputs[0].lockingBytecode == lockW);\n        require(tx.outputs[0].value == F);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs.length == 1 || tx.outputs.length == 2);\n        if (tx.outputs.length == 2) {\n            require(tx.outputs[1].tokenCategory == 0x);\n        }\n    }\n\n    // A2: worker waives, full refund. Output 0 = lockV, value F.\n    function waive(sig sigW) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(F >= dustSafe);\n        require(checkSig(sigW, pkW));\n        require(tx.outputs[0].lockingBytecode == lockV);\n        require(tx.outputs[0].value == F);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs.length == 1 || tx.outputs.length == 2);\n        if (tx.outputs.length == 2) {\n            require(tx.outputs[1].tokenCategory == 0x);\n        }\n    }\n\n    // A3: worker claims, not before T_end. Output 0 = Requested, value F.\n    function claim(sig sigW) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(F >= dustSafe);\n        require(tx.time >= tEnd);\n        require(checkSig(sigW, pkW));\n        require(tx.outputs[0].lockingBytecode == requestedLock);\n        require(tx.outputs[0].value == F);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs.length == 1 || tx.outputs.length == 2);\n        if (tx.outputs.length == 2) {\n            require(tx.outputs[1].tokenCategory == 0x);\n        }\n    }\n\n    // A4: employer opens a dispute, not before T_A4. Output 0 = Dispute (phi = 50), value F.\n    function openDispute(sig sigV) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(F >= dustSafe);\n        require(tx.time >= tA4);\n        require(checkSig(sigV, pkV));\n        require(tx.outputs[0].lockingBytecode == disputeRefundLock);\n        require(tx.outputs[0].value == F);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs.length == 1 || tx.outputs.length == 2);\n        if (tx.outputs.length == 2) {\n            require(tx.outputs[1].tokenCategory == 0x);\n        }\n    }\n}\n",
+  "fingerprint": "9fc9afa245a03802c29b40f73b1c7f438f9400356ce9ee07ba3ed27ab016640b",
+  "debug": {
+    "bytecode": "5979009c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c6765a7aa2695a7a7bad00cd547a8800cc9d00d10088c4519cc4529c9b69c4529c6351d10088686d6d6d7551675979519c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c6765a7aa2695a7a537aad00cd537a8800cc9d00d10088c4519cc4529c9b69c4529c6351d10088686d6d6d7551675979529c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c6765a7aa269577ab175597a537aad00cd557a8800cc9d00d10088c4519cc4529c9b69c4529c6351d10088686d6d6d5167597a539dc0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c6765a7aa269587ab175587a7bad00cd567a8800cc9d00d10088c4519cc4529c9b69c4529c6351d10088686d6d7551686868",
+    "sourceMap": "19:4:38:5;;;;;20:16:20:37;:41::42;:8::44:1;21:16:21:32:0;:36::37;:16:::1;:8::39;22:16:22:32:0;:36::37;:16:::1;:8::39;23:26:23:27:0;:16::42:1;:46::48:0;:8::50:1;24:26:24:27:0;:16::42:1;:46::48:0;:8::50:1;25:12:25:28:0;:32::33;:12:::1;:35:27:9:0;26:30:26:31;:20::46:1;:50::52:0;:12::54:1;25:35:27:9;28:26:28:47:0;:16::54:1;29::29:17:0;:21::29;;:16:::1;:8::31;30:25:30:29:0;;:31::34;:8::37:1;31:27:31:28:0;:16::45:1;:49::54:0;;:8::56:1;32:27:32:28:0;:16::35:1;:8::42;33:27:33:28:0;:16::43:1;:47::49:0;:8::51:1;34:16:34:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;35:12:35:29:0;:33::34;:12:::1;:36:37:9:0;36:31:36:32;:20::47:1;:51::53:0;:12::55:1;35:36:37:9;19:27:38:5;;;;;:4;41::60::0;;;;;42:16:42:37;:41::42;:8::44:1;43:16:43:32:0;:36::37;:16:::1;:8::39;44:16:44:32:0;:36::37;:16:::1;:8::39;45:26:45:27:0;:16::42:1;:46::48:0;:8::50:1;46:26:46:27:0;:16::42:1;:46::48:0;:8::50:1;47:12:47:28:0;:32::33;:12:::1;:35:49:9:0;48:30:48:31;:20::46:1;:50::52:0;:12::54:1;47:35:49:9;50:26:50:47:0;:16::54:1;51::51:17:0;:21::29;;:16:::1;:8::31;52:25:52:29:0;;:31::34;;:8::37:1;53:27:53:28:0;:16::45:1;:49::54:0;;:8::56:1;54:27:54:28:0;:16::35:1;:8::42;55:27:55:28:0;:16::43:1;:47::49:0;:8::51:1;56:16:56:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;57:12:57:29:0;:33::34;:12:::1;:36:59:9:0;58:31:58:32;:20::47:1;:51::53:0;:12::55:1;57:36:59:9;41:29:60:5;;;;;:4;63::83::0;;;;;64:16:64:37;:41::42;:8::44:1;65:16:65:32:0;:36::37;:16:::1;:8::39;66:16:66:32:0;:36::37;:16:::1;:8::39;67:26:67:27:0;:16::42:1;:46::48:0;:8::50:1;68:26:68:27:0;:16::42:1;:46::48:0;:8::50:1;69:12:69:28:0;:32::33;:12:::1;:35:71:9:0;70:30:70:31;:20::46:1;:50::52:0;:12::54:1;69:35:71:9;72:26:72:47:0;:16::54:1;73::73:17:0;:21::29;;:16:::1;:8::31;74:27:74::0;;:8::33:1;;75:25:75:29:0;;:31::34;;:8::37:1;76:27:76:28:0;:16::45:1;:49::62:0;;:8::64:1;77:27:77:28:0;:16::35:1;:8::42;78:27:78:28:0;:16::43:1;:47::49:0;:8::51:1;79:16:79:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;80:12:80:29:0;:33::34;:12:::1;:36:82:9:0;81:31:81:32;:20::47:1;:51::53:0;:12::55:1;80:36:82:9;63:29:83:5;;;;:4;86::106::0;;;;87:16:87:37;:41::42;:8::44:1;88:16:88:32:0;:36::37;:16:::1;:8::39;89:16:89:32:0;:36::37;:16:::1;:8::39;90:26:90:27:0;:16::42:1;:46::48:0;:8::50:1;91:26:91:27:0;:16::42:1;:46::48:0;:8::50:1;92:12:92:28:0;:32::33;:12:::1;:35:94:9:0;93:30:93:31;:20::46:1;:50::52:0;:12::54:1;92:35:94:9;95:26:95:47:0;:16::54:1;96::96:17:0;:21::29;;:16:::1;:8::31;97:27:97:30:0;;:8::32:1;;98:25:98:29:0;;:31::34;:8::37:1;99:27:99:28:0;:16::45:1;:49::66:0;;:8::68:1;100:27:100:28:0;:16::35:1;:8::42;101:27:101:28:0;:16::43:1;:47::49:0;:8::51:1;102:16:102:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;103:12:103:29:0;:33::34;:12:::1;:36:105:9:0;104:31:104:32;:20::47:1;:51::53:0;:12::55:1;103:36:105:9;86:35:106:5;;;;7:0:107:1;;",
+    "logs": [],
+    "requires": [
+      {
+        "ip": 16,
+        "line": 20
+      },
+      {
+        "ip": 20,
+        "line": 21
+      },
+      {
+        "ip": 24,
+        "line": 22
+      },
+      {
+        "ip": 28,
+        "line": 23
+      },
+      {
+        "ip": 32,
+        "line": 24
+      },
+      {
+        "ip": 40,
+        "line": 26
+      },
+      {
+        "ip": 48,
+        "line": 29
+      },
+      {
+        "ip": 52,
+        "line": 30
+      },
+      {
+        "ip": 57,
+        "line": 31
+      },
+      {
+        "ip": 60,
+        "line": 32
+      },
+      {
+        "ip": 64,
+        "line": 33
+      },
+      {
+        "ip": 72,
+        "line": 34
+      },
+      {
+        "ip": 80,
+        "line": 36
+      },
+      {
+        "ip": 95,
+        "line": 42
+      },
+      {
+        "ip": 99,
+        "line": 43
+      },
+      {
+        "ip": 103,
+        "line": 44
+      },
+      {
+        "ip": 107,
+        "line": 45
+      },
+      {
+        "ip": 111,
+        "line": 46
+      },
+      {
+        "ip": 119,
+        "line": 48
+      },
+      {
+        "ip": 127,
+        "line": 51
+      },
+      {
+        "ip": 132,
+        "line": 52
+      },
+      {
+        "ip": 137,
+        "line": 53
+      },
+      {
+        "ip": 140,
+        "line": 54
+      },
+      {
+        "ip": 144,
+        "line": 55
+      },
+      {
+        "ip": 152,
+        "line": 56
+      },
+      {
+        "ip": 160,
+        "line": 58
+      },
+      {
+        "ip": 175,
+        "line": 64
+      },
+      {
+        "ip": 179,
+        "line": 65
+      },
+      {
+        "ip": 183,
+        "line": 66
+      },
+      {
+        "ip": 187,
+        "line": 67
+      },
+      {
+        "ip": 191,
+        "line": 68
+      },
+      {
+        "ip": 199,
+        "line": 70
+      },
+      {
+        "ip": 207,
+        "line": 73
+      },
+      {
+        "ip": 210,
+        "line": 74
+      },
+      {
+        "ip": 216,
+        "line": 75
+      },
+      {
+        "ip": 221,
+        "line": 76
+      },
+      {
+        "ip": 224,
+        "line": 77
+      },
+      {
+        "ip": 228,
+        "line": 78
+      },
+      {
+        "ip": 236,
+        "line": 79
+      },
+      {
+        "ip": 244,
+        "line": 81
+      },
+      {
+        "ip": 257,
+        "line": 87
+      },
+      {
+        "ip": 261,
+        "line": 88
+      },
+      {
+        "ip": 265,
+        "line": 89
+      },
+      {
+        "ip": 269,
+        "line": 90
+      },
+      {
+        "ip": 273,
+        "line": 91
+      },
+      {
+        "ip": 281,
+        "line": 93
+      },
+      {
+        "ip": 289,
+        "line": 96
+      },
+      {
+        "ip": 292,
+        "line": 97
+      },
+      {
+        "ip": 297,
+        "line": 98
+      },
+      {
+        "ip": 302,
+        "line": 99
+      },
+      {
+        "ip": 305,
+        "line": 100
+      },
+      {
+        "ip": 309,
+        "line": 101
+      },
+      {
+        "ip": 317,
+        "line": 102
+      },
+      {
+        "ip": 325,
+        "line": 104
+      }
+    ]
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.14.0",
+    "options": {
+      "enforceFunctionParameterTypes": true,
+      "enforceLocktimeGuard": true
+    }
+  },
+  "updatedAt": "2026-11-14T17:14:47.673Z"
+}

@@ -1,0 +1,187 @@
+pragma cashscript ^0.14.0;
+
+// GigPact R-0 - state 4 of 4: DISPUTE (BCH mode).
+// One source, two instances: phi = 100 (after objection) and phi = 50 (after A4).
+// Paths: D1 decide worker, D2 decide employer, D3 decide split (all arbiter),
+//        D4 fallback (anyone, age >= L), D5 pay (employer), D6 waive (worker).
+// phi is only 100 or 50, so there is no multiplication. Spec: Architecture v1.1 sections 2.2, 9.3.
+contract GigPactDispute(
+    pubkey pkV,
+    pubkey pkW,
+    pubkey pkA,
+    bytes lockV,
+    bytes lockW,
+    bytes lockA,
+    int phi,         // 100 or 50
+    int fA,          // arbiter fee, satoshis (fixed parameter)
+    int l,           // L in blocks (relative lock)
+    int dustSafe
+) {
+    // D1: arbiter decides for the worker. Out 0 = lockW (F - fA), out 1 = lockA (fA).
+    function decideWorker(sig sigA) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(fA >= dustSafe);
+        require(F - fA >= dustSafe);
+        require(checkSig(sigA, pkA));
+        require(tx.outputs[0].lockingBytecode == lockW);
+        require(tx.outputs[0].value == F - fA);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs[1].lockingBytecode == lockA);
+        require(tx.outputs[1].value == fA);
+        require(tx.outputs[1].tokenCategory == 0x);
+        require(tx.outputs.length == 2 || tx.outputs.length == 3);
+        if (tx.outputs.length == 3) {
+            require(tx.outputs[2].tokenCategory == 0x);
+        }
+    }
+
+    // D2: arbiter decides for the employer. Out 0 = lockV (F - fA), out 1 = lockA (fA).
+    function decideEmployer(sig sigA) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(fA >= dustSafe);
+        require(F - fA >= dustSafe);
+        require(checkSig(sigA, pkA));
+        require(tx.outputs[0].lockingBytecode == lockV);
+        require(tx.outputs[0].value == F - fA);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs[1].lockingBytecode == lockA);
+        require(tx.outputs[1].value == fA);
+        require(tx.outputs[1].tokenCategory == 0x);
+        require(tx.outputs.length == 2 || tx.outputs.length == 3);
+        if (tx.outputs.length == 3) {
+            require(tx.outputs[2].tokenCategory == 0x);
+        }
+    }
+
+    // D3: arbiter splits. Out 0 = lockW floor((F-fA)/2), out 1 = lockV rest, out 2 = lockA (fA).
+    function decideSplit(sig sigA) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        int net = F - fA;
+        int w = net / 2;
+        int v = net - w;
+        require(fA >= dustSafe);
+        require(w >= dustSafe);
+        require(checkSig(sigA, pkA));
+        require(tx.outputs[0].lockingBytecode == lockW);
+        require(tx.outputs[0].value == w);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs[1].lockingBytecode == lockV);
+        require(tx.outputs[1].value == v);
+        require(tx.outputs[1].tokenCategory == 0x);
+        require(tx.outputs[2].lockingBytecode == lockA);
+        require(tx.outputs[2].value == fA);
+        require(tx.outputs[2].tokenCategory == 0x);
+        require(tx.outputs.length == 3 || tx.outputs.length == 4);
+        if (tx.outputs.length == 4) {
+            require(tx.outputs[3].tokenCategory == 0x);
+        }
+    }
+
+    // D4: nobody signs; anyone may broadcast once age >= L.
+    // phi = 100: out 0 = lockW (F). phi = 50: out 0 = lockW floor(F/2), out 1 = lockV rest.
+    function fallback() {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(this.age >= l);
+        require(phi == 100 || phi == 50);
+        if (phi == 100) {
+            require(F >= dustSafe);
+            require(tx.outputs[0].lockingBytecode == lockW);
+            require(tx.outputs[0].value == F);
+            require(tx.outputs[0].tokenCategory == 0x);
+            require(tx.outputs.length == 1 || tx.outputs.length == 2);
+            if (tx.outputs.length == 2) {
+                require(tx.outputs[1].tokenCategory == 0x);
+            }
+        } else {
+            int w = F / 2;
+            int v = F - w;
+            require(w >= dustSafe);
+            require(tx.outputs[0].lockingBytecode == lockW);
+            require(tx.outputs[0].value == w);
+            require(tx.outputs[0].tokenCategory == 0x);
+            require(tx.outputs[1].lockingBytecode == lockV);
+            require(tx.outputs[1].value == v);
+            require(tx.outputs[1].tokenCategory == 0x);
+            require(tx.outputs.length == 2 || tx.outputs.length == 3);
+            if (tx.outputs.length == 3) {
+                require(tx.outputs[2].tokenCategory == 0x);
+            }
+        }
+    }
+
+    // D5: employer pays the worker. Out 0 = lockW, value F.
+    function payOut(sig sigV) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(checkSig(sigV, pkV));
+        require(tx.outputs[0].lockingBytecode == lockW);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+
+    // D6: worker waives, full refund. Out 0 = lockV, value F.
+    function waive(sig sigW) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(checkSig(sigW, pkW));
+        require(tx.outputs[0].lockingBytecode == lockV);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+}

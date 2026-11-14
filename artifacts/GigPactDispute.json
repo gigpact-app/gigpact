@@ -1,0 +1,528 @@
+{
+  "contractName": "GigPactDispute",
+  "constructorInputs": [
+    {
+      "name": "pkV",
+      "type": "pubkey"
+    },
+    {
+      "name": "pkW",
+      "type": "pubkey"
+    },
+    {
+      "name": "pkA",
+      "type": "pubkey"
+    },
+    {
+      "name": "lockV",
+      "type": "bytes"
+    },
+    {
+      "name": "lockW",
+      "type": "bytes"
+    },
+    {
+      "name": "lockA",
+      "type": "bytes"
+    },
+    {
+      "name": "phi",
+      "type": "int"
+    },
+    {
+      "name": "fA",
+      "type": "int"
+    },
+    {
+      "name": "l",
+      "type": "int"
+    },
+    {
+      "name": "dustSafe",
+      "type": "int"
+    }
+  ],
+  "abi": [
+    {
+      "name": "decideWorker",
+      "inputs": [
+        {
+          "name": "sigA",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "decideEmployer",
+      "inputs": [
+        {
+          "name": "sigA",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "decideSplit",
+      "inputs": [
+        {
+          "name": "sigA",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "fallback",
+      "inputs": []
+    },
+    {
+      "name": "payOut",
+      "inputs": [
+        {
+          "name": "sigV",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "waive",
+      "inputs": [
+        {
+          "name": "sigW",
+          "type": "sig"
+        }
+      ]
+    }
+  ],
+  "bytecode": "OP_10 OP_PICK OP_0 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_8 OP_PICK OP_11 OP_PICK OP_GREATERTHANOREQUAL OP_VERIFY OP_DUP OP_9 OP_PICK OP_SUB OP_11 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_11 OP_ROLL OP_4 OP_ROLL OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_5 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_SWAP OP_7 OP_PICK OP_SUB OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_4 OP_ROLL OP_EQUALVERIFY OP_1 OP_OUTPUTVALUE OP_5 OP_ROLL OP_NUMEQUALVERIFY OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_2DROP OP_1 OP_ELSE OP_10 OP_PICK OP_1 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_8 OP_PICK OP_11 OP_PICK OP_GREATERTHANOREQUAL OP_VERIFY OP_DUP OP_9 OP_PICK OP_SUB OP_11 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_11 OP_ROLL OP_4 OP_ROLL OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_4 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_SWAP OP_7 OP_PICK OP_SUB OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_4 OP_ROLL OP_EQUALVERIFY OP_1 OP_OUTPUTVALUE OP_5 OP_ROLL OP_NUMEQUALVERIFY OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_2DROP OP_1 OP_ELSE OP_10 OP_PICK OP_2 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_8 OP_PICK OP_SUB OP_DUP OP_2 OP_DIV OP_TUCK OP_SUB OP_9 OP_PICK OP_12 OP_PICK OP_GREATERTHANOREQUAL OP_VERIFY OP_OVER OP_12 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_12 OP_ROLL OP_5 OP_ROLL OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_6 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_ROT OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_4 OP_ROLL OP_EQUALVERIFY OP_1 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_2 OP_OUTPUTBYTECODE OP_3 OP_ROLL OP_EQUALVERIFY OP_2 OP_OUTPUTVALUE OP_4 OP_ROLL OP_NUMEQUALVERIFY OP_2 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_4 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_4 OP_NUMEQUAL OP_IF OP_3 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_DROP OP_1 OP_ELSE OP_10 OP_PICK OP_3 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_9 OP_ROLL OP_CHECKSEQUENCEVERIFY OP_DROP OP_7 OP_PICK 64 OP_NUMEQUAL OP_8 OP_PICK 32 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_7 OP_ROLL 64 OP_NUMEQUAL OP_IF OP_DUP OP_9 OP_PICK OP_GREATERTHANOREQUAL OP_VERIFY OP_0 OP_OUTPUTBYTECODE OP_6 OP_PICK OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_OVER OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_ELSE OP_DUP OP_2 OP_DIV OP_2DUP OP_SUB OP_OVER OP_11 OP_PICK OP_GREATERTHANOREQUAL OP_VERIFY OP_0 OP_OUTPUTBYTECODE OP_8 OP_PICK OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_2 OP_PICK OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_7 OP_PICK OP_EQUALVERIFY OP_1 OP_OUTPUTVALUE OP_OVER OP_NUMEQUALVERIFY OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_ENDIF OP_2DROP OP_2DROP OP_2DROP OP_2DROP OP_2DROP OP_1 OP_ELSE OP_10 OP_PICK OP_4 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_DUP OP_11 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_11 OP_ROLL OP_ROT OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_5 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_2DROP OP_2DROP OP_1 OP_ELSE OP_10 OP_ROLL OP_5 OP_NUMEQUALVERIFY OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_DUP OP_11 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_10 OP_ROLL OP_3 OP_ROLL OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_4 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_2DROP OP_DROP OP_1 OP_ENDIF OP_ENDIF OP_ENDIF OP_ENDIF OP_ENDIF",
+  "source": "pragma cashscript ^0.14.0;\n\n// GigPact R-0 - state 4 of 4: DISPUTE (BCH mode).\n// One source, two instances: phi = 100 (after objection) and phi = 50 (after A4).\n// Paths: D1 decide worker, D2 decide employer, D3 decide split (all arbiter),\n//        D4 fallback (anyone, age >= L), D5 pay (employer), D6 waive (worker).\n// phi is only 100 or 50, so there is no multiplication. Spec: Architecture v1.1 sections 2.2, 9.3.\ncontract GigPactDispute(\n    pubkey pkV,\n    pubkey pkW,\n    pubkey pkA,\n    bytes lockV,\n    bytes lockW,\n    bytes lockA,\n    int phi,         // 100 or 50\n    int fA,          // arbiter fee, satoshis (fixed parameter)\n    int l,           // L in blocks (relative lock)\n    int dustSafe\n) {\n    // D1: arbiter decides for the worker. Out 0 = lockW (F - fA), out 1 = lockA (fA).\n    function decideWorker(sig sigA) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(fA >= dustSafe);\n        require(F - fA >= dustSafe);\n        require(checkSig(sigA, pkA));\n        require(tx.outputs[0].lockingBytecode == lockW);\n        require(tx.outputs[0].value == F - fA);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs[1].lockingBytecode == lockA);\n        require(tx.outputs[1].value == fA);\n        require(tx.outputs[1].tokenCategory == 0x);\n        require(tx.outputs.length == 2 || tx.outputs.length == 3);\n        if (tx.outputs.length == 3) {\n            require(tx.outputs[2].tokenCategory == 0x);\n        }\n    }\n\n    // D2: arbiter decides for the employer. Out 0 = lockV (F - fA), out 1 = lockA (fA).\n    function decideEmployer(sig sigA) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(fA >= dustSafe);\n        require(F - fA >= dustSafe);\n        require(checkSig(sigA, pkA));\n        require(tx.outputs[0].lockingBytecode == lockV);\n        require(tx.outputs[0].value == F - fA);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs[1].lockingBytecode == lockA);\n        require(tx.outputs[1].value == fA);\n        require(tx.outputs[1].tokenCategory == 0x);\n        require(tx.outputs.length == 2 || tx.outputs.length == 3);\n        if (tx.outputs.length == 3) {\n            require(tx.outputs[2].tokenCategory == 0x);\n        }\n    }\n\n    // D3: arbiter splits. Out 0 = lockW floor((F-fA)/2), out 1 = lockV rest, out 2 = lockA (fA).\n    function decideSplit(sig sigA) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        int net = F - fA;\n        int w = net / 2;\n        int v = net - w;\n        require(fA >= dustSafe);\n        require(w >= dustSafe);\n        require(checkSig(sigA, pkA));\n        require(tx.outputs[0].lockingBytecode == lockW);\n        require(tx.outputs[0].value == w);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs[1].lockingBytecode == lockV);\n        require(tx.outputs[1].value == v);\n        require(tx.outputs[1].tokenCategory == 0x);\n        require(tx.outputs[2].lockingBytecode == lockA);\n        require(tx.outputs[2].value == fA);\n        require(tx.outputs[2].tokenCategory == 0x);\n        require(tx.outputs.length == 3 || tx.outputs.length == 4);\n        if (tx.outputs.length == 4) {\n            require(tx.outputs[3].tokenCategory == 0x);\n        }\n    }\n\n    // D4: nobody signs; anyone may broadcast once age >= L.\n    // phi = 100: out 0 = lockW (F). phi = 50: out 0 = lockW floor(F/2), out 1 = lockV rest.\n    function fallback() {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(this.age >= l);\n        require(phi == 100 || phi == 50);\n        if (phi == 100) {\n            require(F >= dustSafe);\n            require(tx.outputs[0].lockingBytecode == lockW);\n            require(tx.outputs[0].value == F);\n            require(tx.outputs[0].tokenCategory == 0x);\n            require(tx.outputs.length == 1 || tx.outputs.length == 2);\n            if (tx.outputs.length == 2) {\n                require(tx.outputs[1].tokenCategory == 0x);\n            }\n        } else {\n            int w = F / 2;\n            int v = F - w;\n            require(w >= dustSafe);\n            require(tx.outputs[0].lockingBytecode == lockW);\n            require(tx.outputs[0].value == w);\n            require(tx.outputs[0].tokenCategory == 0x);\n            require(tx.outputs[1].lockingBytecode == lockV);\n            require(tx.outputs[1].value == v);\n            require(tx.outputs[1].tokenCategory == 0x);\n            require(tx.outputs.length == 2 || tx.outputs.length == 3);\n            if (tx.outputs.length == 3) {\n                require(tx.outputs[2].tokenCategory == 0x);\n            }\n        }\n    }\n\n    // D5: employer pays the worker. Out 0 = lockW, value F.\n    function payOut(sig sigV) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(F >= dustSafe);\n        require(checkSig(sigV, pkV));\n        require(tx.outputs[0].lockingBytecode == lockW);\n        require(tx.outputs[0].value == F);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs.length == 1 || tx.outputs.length == 2);\n        if (tx.outputs.length == 2) {\n            require(tx.outputs[1].tokenCategory == 0x);\n        }\n    }\n\n    // D6: worker waives, full refund. Out 0 = lockV, value F.\n    function waive(sig sigW) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(F >= dustSafe);\n        require(checkSig(sigW, pkW));\n        require(tx.outputs[0].lockingBytecode == lockV);\n        require(tx.outputs[0].value == F);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs.length == 1 || tx.outputs.length == 2);\n        if (tx.outputs.length == 2) {\n            require(tx.outputs[1].tokenCategory == 0x);\n        }\n    }\n}\n",
+  "fingerprint": "278f8bc84ad5a8078f0110ea397209335e0d58f6080eafc3ee46d975f238f956",
+  "debug": {
+    "bytecode": "5a79009c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c658795b79a269765979945b7aa2695b7a547aad00cd557a8800cc7c5779949d00d1008851cd547a8851cc557a9d51d10088c4529cc4539c9b69c4539c6352d10088686d6d6d51675a79519c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c658795b79a269765979945b7aa2695b7a547aad00cd547a8800cc7c5779949d00d1008851cd547a8851cc557a9d51d10088c4529cc4539c9b69c4539c6352d10088686d6d6d51675a79529c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c65879947652967d9459795c79a269785c7aa2695c7a557aad00cd567a8800cc7b9d00d1008851cd547a8851cc9d51d1008852cd537a8852cc547a9d52d10088c4539cc4549c9b69c4549c6353d10088686d6d7551675a79539c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c6597ab275577901649c587901329c9b69577a01649c63765979a26900cd56798800cc789d00d10088c4519cc4529c9b69c4529c6351d1008868677652966e94785b79a26900cd58798800cc52799d00d1008851cd57798851cc789d51d10088c4529cc4539c9b69c4539c6352d10088686d686d6d6d6d6d51675a79549c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c6765b7aa2695b7a7bad00cd557a8800cc9d00d10088c4519cc4529c9b69c4529c6351d10088686d6d6d6d51675a7a559dc0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c6765b7aa2695a7a537aad00cd547a8800cc9d00d10088c4519cc4529c9b69c4529c6351d10088686d6d6d75516868686868",
+    "sourceMap": "21:4:44:5;;;;;22:16:22:37;:41::42;:8::44:1;23:16:23:32:0;:36::37;:16:::1;:8::39;24:16:24:32:0;:36::37;:16:::1;:8::39;25:26:25:27:0;:16::42:1;:46::48:0;:8::50:1;26:26:26:27:0;:16::42:1;:46::48:0;:8::50:1;27:12:27:28:0;:32::33;:12:::1;:35:29:9:0;28:30:28:31;:20::46:1;:50::52:0;:12::54:1;27:35:29:9;30:26:30:47:0;:16::54:1;31::31:18:0;;:22::30;;:16:::1;:8::32;32:16:32:17:0;:20::22;;:16:::1;:26::34:0;;:16:::1;:8::36;33:25:33:29:0;;:31::34;;:8::37:1;34:27:34:28:0;:16::45:1;:49::54:0;;:8::56:1;35:27:35:28:0;:16::35:1;:39::40:0;:43::45;;:39:::1;:8::47;36:27:36:28:0;:16::43:1;:47::49:0;:8::51:1;37:27:37:28:0;:16::45:1;:49::54:0;;:8::56:1;38:27:38:28:0;:16::35:1;:39::41:0;;:8::43:1;39:27:39:28:0;:16::43:1;:47::49:0;:8::51:1;40:16:40:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;41:12:41:29:0;:33::34;:12:::1;:36:43:9:0;42:31:42:32;:20::47:1;:51::53:0;:12::55:1;41:36:43:9;21::44:5;;;;:4;47::70::0;;;;;48:16:48:37;:41::42;:8::44:1;49:16:49:32:0;:36::37;:16:::1;:8::39;50:16:50:32:0;:36::37;:16:::1;:8::39;51:26:51:27:0;:16::42:1;:46::48:0;:8::50:1;52:26:52:27:0;:16::42:1;:46::48:0;:8::50:1;53:12:53:28:0;:32::33;:12:::1;:35:55:9:0;54:30:54:31;:20::46:1;:50::52:0;:12::54:1;53:35:55:9;56:26:56:47:0;:16::54:1;57::57:18:0;;:22::30;;:16:::1;:8::32;58:16:58:17:0;:20::22;;:16:::1;:26::34:0;;:16:::1;:8::36;59:25:59:29:0;;:31::34;;:8::37:1;60:27:60:28:0;:16::45:1;:49::54:0;;:8::56:1;61:27:61:28:0;:16::35:1;:39::40:0;:43::45;;:39:::1;:8::47;62:27:62:28:0;:16::43:1;:47::49:0;:8::51:1;63:27:63:28:0;:16::45:1;:49::54:0;;:8::56:1;64:27:64:28:0;:16::35:1;:39::41:0;;:8::43:1;65:27:65:28:0;:16::43:1;:47::49:0;:8::51:1;66:16:66:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;67:12:67:29:0;:33::34;:12:::1;:36:69:9:0;68:31:68:32;:20::47:1;:51::53:0;:12::55:1;67:36:69:9;47:38:70:5;;;;:4;73::102::0;;;;;74:16:74:37;:41::42;:8::44:1;75:16:75:32:0;:36::37;:16:::1;:8::39;76:16:76:32:0;:36::37;:16:::1;:8::39;77:26:77:27:0;:16::42:1;:46::48:0;:8::50:1;78:26:78:27:0;:16::42:1;:46::48:0;:8::50:1;79:12:79:28:0;:32::33;:12:::1;:35:81:9:0;80:30:80:31;:20::46:1;:50::52:0;:12::54:1;79:35:81:9;82:26:82:47:0;:16::54:1;83:22:83:24:0;;:18:::1;84:16:84:19:0;:22::23;:16:::1;85::85::0;::::1;86::86:18:0;;:22::30;;:16:::1;:8::32;87:16:87:17:0;:21::29;;:16:::1;:8::31;88:25:88:29:0;;:31::34;;:8::37:1;89:27:89:28:0;:16::45:1;:49::54:0;;:8::56:1;90:27:90:28:0;:16::35:1;:39::40:0;:8::42:1;91:27:91:28:0;:16::43:1;:47::49:0;:8::51:1;92:27:92:28:0;:16::45:1;:49::54:0;;:8::56:1;93:27:93:28:0;:16::35:1;:8::42;94:27:94:28:0;:16::43:1;:47::49:0;:8::51:1;95:27:95:28:0;:16::45:1;:49::54:0;;:8::56:1;96:27:96:28:0;:16::35:1;:39::41:0;;:8::43:1;97:27:97:28:0;:16::43:1;:47::49:0;:8::51:1;98:16:98:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;99:12:99:29:0;:33::34;:12:::1;:36:101:9:0;100:31:100:32;:20::47:1;:51::53:0;:12::55:1;99:36:101:9;73:35:102:5;;;;:4;106::142::0;;;;;107:16:107:37;:41::42;:8::44:1;108:16:108:32:0;:36::37;:16:::1;:8::39;109:16:109:32:0;:36::37;:16:::1;:8::39;110:26:110:27:0;:16::42:1;:46::48:0;:8::50:1;111:26:111:27:0;:16::42:1;:46::48:0;:8::50:1;112:12:112:28:0;:32::33;:12:::1;:35:114:9:0;113:30:113:31;:20::46:1;:50::52:0;:12::54:1;112:35:114:9;115:26:115:47:0;:16::54:1;116:28:116:29:0;;:8::31:1;;117:16:117:19:0;;:23::26;:16:::1;:30::33:0;;:37::39;:30:::1;:16;:8::41;118:12:118:15:0;;:19::22;:12:::1;:24:127:9:0;119:20:119:21;:25::33;;:20:::1;:12::35;120:31:120:32:0;:20::49:1;:53::58:0;;:12::60:1;121:31:121:32:0;:20::39:1;:43::44:0;:12::46:1;122:31:122:32:0;:20::47:1;:51::53:0;:12::55:1;123:20:123:37:0;:41::42;:20:::1;:46::63:0;:67::68;:46:::1;:20;:12::70;124:16:124:33:0;:37::38;:16:::1;:40:126:13:0;125:35:125:36;:24::51:1;:55::57:0;:16::59:1;124:40:126:13;127:15:141:9:0;128:20:128:21;:24::25;:20:::1;129::129::0;::::1;130::130:21:0;:25::33;;:20:::1;:12::35;131:31:131:32:0;:20::49:1;:53::58:0;;:12::60:1;132:31:132:32:0;:20::39:1;:43::44:0;;:12::46:1;133:31:133:32:0;:20::47:1;:51::53:0;:12::55:1;134:31:134:32:0;:20::49:1;:53::58:0;;:12::60:1;135:31:135:32:0;:20::39:1;:43::44:0;:12::46:1;136:31:136:32:0;:20::47:1;:51::53:0;:12::55:1;137:20:137:37:0;:41::42;:20:::1;:46::63:0;:67::68;:46:::1;:20;:12::70;138:16:138:33:0;:37::38;:16:::1;:40:140:13:0;139:35:139:36;:24::51:1;:55::57:0;:16::59:1;138:40:140:13;127:15:141:9;;106:24:142:5;;;;;;:4;145::164::0;;;;;146:16:146:37;:41::42;:8::44:1;147:16:147:32:0;:36::37;:16:::1;:8::39;148:16:148:32:0;:36::37;:16:::1;:8::39;149:26:149:27:0;:16::42:1;:46::48:0;:8::50:1;150:26:150:27:0;:16::42:1;:46::48:0;:8::50:1;151:12:151:28:0;:32::33;:12:::1;:35:153:9:0;152:30:152:31;:20::46:1;:50::52:0;:12::54:1;151:35:153:9;154:26:154:47:0;:16::54:1;155::155:17:0;:21::29;;:16:::1;:8::31;156:25:156:29:0;;:31::34;:8::37:1;157:27:157:28:0;:16::45:1;:49::54:0;;:8::56:1;158:27:158:28:0;:16::35:1;:8::42;159:27:159:28:0;:16::43:1;:47::49:0;:8::51:1;160:16:160:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;161:12:161:29:0;:33::34;:12:::1;:36:163:9:0;162:31:162:32;:20::47:1;:51::53:0;:12::55:1;161:36:163:9;145:30:164:5;;;;;:4;167::186::0;;;;168:16:168:37;:41::42;:8::44:1;169:16:169:32:0;:36::37;:16:::1;:8::39;170:16:170:32:0;:36::37;:16:::1;:8::39;171:26:171:27:0;:16::42:1;:46::48:0;:8::50:1;172:26:172:27:0;:16::42:1;:46::48:0;:8::50:1;173:12:173:28:0;:32::33;:12:::1;:35:175:9:0;174:30:174:31;:20::46:1;:50::52:0;:12::54:1;173:35:175:9;176:26:176:47:0;:16::54:1;177::177:17:0;:21::29;;:16:::1;:8::31;178:25:178:29:0;;:31::34;;:8::37:1;179:27:179:28:0;:16::45:1;:49::54:0;;:8::56:1;180:27:180:28:0;:16::35:1;:8::42;181:27:181:28:0;:16::43:1;:47::49:0;:8::51:1;182:16:182:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;183:12:183:29:0;:33::34;:12:::1;:36:185:9:0;184:31:184:32;:20::47:1;:51::53:0;:12::55:1;183:36:185:9;167:29:186:5;;;;;8:0:187:1;;;;",
+    "logs": [],
+    "requires": [
+      {
+        "ip": 17,
+        "line": 22
+      },
+      {
+        "ip": 21,
+        "line": 23
+      },
+      {
+        "ip": 25,
+        "line": 24
+      },
+      {
+        "ip": 29,
+        "line": 25
+      },
+      {
+        "ip": 33,
+        "line": 26
+      },
+      {
+        "ip": 41,
+        "line": 28
+      },
+      {
+        "ip": 50,
+        "line": 31
+      },
+      {
+        "ip": 58,
+        "line": 32
+      },
+      {
+        "ip": 63,
+        "line": 33
+      },
+      {
+        "ip": 68,
+        "line": 34
+      },
+      {
+        "ip": 75,
+        "line": 35
+      },
+      {
+        "ip": 79,
+        "line": 36
+      },
+      {
+        "ip": 84,
+        "line": 37
+      },
+      {
+        "ip": 89,
+        "line": 38
+      },
+      {
+        "ip": 93,
+        "line": 39
+      },
+      {
+        "ip": 101,
+        "line": 40
+      },
+      {
+        "ip": 109,
+        "line": 42
+      },
+      {
+        "ip": 123,
+        "line": 48
+      },
+      {
+        "ip": 127,
+        "line": 49
+      },
+      {
+        "ip": 131,
+        "line": 50
+      },
+      {
+        "ip": 135,
+        "line": 51
+      },
+      {
+        "ip": 139,
+        "line": 52
+      },
+      {
+        "ip": 147,
+        "line": 54
+      },
+      {
+        "ip": 156,
+        "line": 57
+      },
+      {
+        "ip": 164,
+        "line": 58
+      },
+      {
+        "ip": 169,
+        "line": 59
+      },
+      {
+        "ip": 174,
+        "line": 60
+      },
+      {
+        "ip": 181,
+        "line": 61
+      },
+      {
+        "ip": 185,
+        "line": 62
+      },
+      {
+        "ip": 190,
+        "line": 63
+      },
+      {
+        "ip": 195,
+        "line": 64
+      },
+      {
+        "ip": 199,
+        "line": 65
+      },
+      {
+        "ip": 207,
+        "line": 66
+      },
+      {
+        "ip": 215,
+        "line": 68
+      },
+      {
+        "ip": 229,
+        "line": 74
+      },
+      {
+        "ip": 233,
+        "line": 75
+      },
+      {
+        "ip": 237,
+        "line": 76
+      },
+      {
+        "ip": 241,
+        "line": 77
+      },
+      {
+        "ip": 245,
+        "line": 78
+      },
+      {
+        "ip": 253,
+        "line": 80
+      },
+      {
+        "ip": 270,
+        "line": 86
+      },
+      {
+        "ip": 275,
+        "line": 87
+      },
+      {
+        "ip": 280,
+        "line": 88
+      },
+      {
+        "ip": 285,
+        "line": 89
+      },
+      {
+        "ip": 289,
+        "line": 90
+      },
+      {
+        "ip": 293,
+        "line": 91
+      },
+      {
+        "ip": 298,
+        "line": 92
+      },
+      {
+        "ip": 301,
+        "line": 93
+      },
+      {
+        "ip": 305,
+        "line": 94
+      },
+      {
+        "ip": 310,
+        "line": 95
+      },
+      {
+        "ip": 315,
+        "line": 96
+      },
+      {
+        "ip": 319,
+        "line": 97
+      },
+      {
+        "ip": 327,
+        "line": 98
+      },
+      {
+        "ip": 335,
+        "line": 100
+      },
+      {
+        "ip": 349,
+        "line": 107
+      },
+      {
+        "ip": 353,
+        "line": 108
+      },
+      {
+        "ip": 357,
+        "line": 109
+      },
+      {
+        "ip": 361,
+        "line": 110
+      },
+      {
+        "ip": 365,
+        "line": 111
+      },
+      {
+        "ip": 373,
+        "line": 113
+      },
+      {
+        "ip": 379,
+        "line": 116
+      },
+      {
+        "ip": 390,
+        "line": 117
+      },
+      {
+        "ip": 400,
+        "line": 119
+      },
+      {
+        "ip": 405,
+        "line": 120
+      },
+      {
+        "ip": 409,
+        "line": 121
+      },
+      {
+        "ip": 413,
+        "line": 122
+      },
+      {
+        "ip": 421,
+        "line": 123
+      },
+      {
+        "ip": 429,
+        "line": 125
+      },
+      {
+        "ip": 441,
+        "line": 130
+      },
+      {
+        "ip": 446,
+        "line": 131
+      },
+      {
+        "ip": 451,
+        "line": 132
+      },
+      {
+        "ip": 455,
+        "line": 133
+      },
+      {
+        "ip": 460,
+        "line": 134
+      },
+      {
+        "ip": 464,
+        "line": 135
+      },
+      {
+        "ip": 468,
+        "line": 136
+      },
+      {
+        "ip": 476,
+        "line": 137
+      },
+      {
+        "ip": 484,
+        "line": 139
+      },
+      {
+        "ip": 502,
+        "line": 146
+      },
+      {
+        "ip": 506,
+        "line": 147
+      },
+      {
+        "ip": 510,
+        "line": 148
+      },
+      {
+        "ip": 514,
+        "line": 149
+      },
+      {
+        "ip": 518,
+        "line": 150
+      },
+      {
+        "ip": 526,
+        "line": 152
+      },
+      {
+        "ip": 534,
+        "line": 155
+      },
+      {
+        "ip": 538,
+        "line": 156
+      },
+      {
+        "ip": 543,
+        "line": 157
+      },
+      {
+        "ip": 546,
+        "line": 158
+      },
+      {
+        "ip": 550,
+        "line": 159
+      },
+      {
+        "ip": 558,
+        "line": 160
+      },
+      {
+        "ip": 566,
+        "line": 162
+      },
+      {
+        "ip": 580,
+        "line": 168
+      },
+      {
+        "ip": 584,
+        "line": 169
+      },
+      {
+        "ip": 588,
+        "line": 170
+      },
+      {
+        "ip": 592,
+        "line": 171
+      },
+      {
+        "ip": 596,
+        "line": 172
+      },
+      {
+        "ip": 604,
+        "line": 174
+      },
+      {
+        "ip": 612,
+        "line": 177
+      },
+      {
+        "ip": 617,
+        "line": 178
+      },
+      {
+        "ip": 622,
+        "line": 179
+      },
+      {
+        "ip": 625,
+        "line": 180
+      },
+      {
+        "ip": 629,
+        "line": 181
+      },
+      {
+        "ip": 637,
+        "line": 182
+      },
+      {
+        "ip": 645,
+        "line": 184
+      }
+    ],
+    "sourceTags": "476:476:sc"
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.14.0",
+    "options": {
+      "enforceFunctionParameterTypes": true,
+      "enforceLocktimeGuard": true
+    }
+  },
+  "updatedAt": "2026-11-14T17:14:47.702Z"
+}

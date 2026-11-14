@@ -1,0 +1,103 @@
+pragma cashscript ^0.14.0;
+
+// GigPact R-0 - state 3 of 4: REQUESTED (BCH mode).
+// Paths: C1 complete (anyone, age >= Dv), C2 object (employer), C3 pay (employer),
+//        C4 waive (worker). C2..C4 have no upper time limit.
+// Spec: Architecture v1.1 sections 2.2, 3.
+contract GigPactRequested(
+    pubkey pkV,
+    pubkey pkW,
+    bytes lockV,
+    bytes lockW,
+    bytes disputePayLock,   // next state after C2 (Dispute with phi = 100)
+    int dv,                 // Dv in blocks (relative lock)
+    int dustSafe
+) {
+    // C1: nobody signs; anyone may broadcast once the relative lock has passed. Output 0 = lockW, value F.
+    function complete() {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(this.age >= dv);
+        require(tx.outputs[0].lockingBytecode == lockW);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+
+    // C2: employer objects. Output 0 = Dispute (phi = 100), value F.
+    function objectClaim(sig sigV) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(checkSig(sigV, pkV));
+        require(tx.outputs[0].lockingBytecode == disputePayLock);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+
+    // C3: employer pays voluntarily. Output 0 = lockW, value F.
+    function payOut(sig sigV) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(checkSig(sigV, pkV));
+        require(tx.outputs[0].lockingBytecode == lockW);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+
+    // C4: worker waives, full refund. Output 0 = lockV, value F.
+    function waive(sig sigW) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(checkSig(sigW, pkW));
+        require(tx.outputs[0].lockingBytecode == lockV);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+}

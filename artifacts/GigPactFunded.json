@@ -1,0 +1,192 @@
+{
+  "contractName": "GigPactFunded",
+  "constructorInputs": [
+    {
+      "name": "pkV",
+      "type": "pubkey"
+    },
+    {
+      "name": "pkW",
+      "type": "pubkey"
+    },
+    {
+      "name": "lockV",
+      "type": "bytes"
+    },
+    {
+      "name": "acceptedLock",
+      "type": "bytes"
+    },
+    {
+      "name": "fundedValue",
+      "type": "int"
+    },
+    {
+      "name": "fA",
+      "type": "int"
+    },
+    {
+      "name": "dustSafe",
+      "type": "int"
+    }
+  ],
+  "abi": [
+    {
+      "name": "accept",
+      "inputs": [
+        {
+          "name": "sigW",
+          "type": "sig"
+        }
+      ]
+    },
+    {
+      "name": "cancel",
+      "inputs": [
+        {
+          "name": "sigV",
+          "type": "sig"
+        }
+      ]
+    }
+  ],
+  "bytecode": "OP_7 OP_PICK OP_0 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_DUP OP_6 OP_PICK OP_NUMEQUALVERIFY OP_6 OP_PICK OP_8 OP_PICK OP_GREATERTHANOREQUAL OP_VERIFY OP_6 OP_PICK OP_7 OP_PICK OP_ADD OP_7 OP_PICK OP_ADD OP_7 OP_PICK OP_ADD OP_6 OP_PICK OP_LESSTHANOREQUAL OP_VERIFY OP_5 OP_PICK OP_7 OP_ROLL OP_SUB OP_7 OP_PICK OP_8 OP_PICK OP_ADD OP_GREATERTHANOREQUAL OP_VERIFY OP_5 OP_ROLL OP_2 OP_DIV OP_6 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_6 OP_ROLL OP_3 OP_ROLL OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_4 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_DROP OP_1 OP_ELSE OP_7 OP_ROLL OP_1 OP_NUMEQUALVERIFY OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_TXINPUTCOUNT OP_2 OP_GREATERTHANOREQUAL OP_VERIFY OP_TXINPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_0 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_1 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXINPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_UTXOTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_INPUTINDEX OP_UTXOVALUE OP_DUP OP_8 OP_ROLL OP_GREATERTHANOREQUAL OP_VERIFY OP_7 OP_ROLL OP_ROT OP_CHECKSIGVERIFY OP_0 OP_OUTPUTBYTECODE OP_3 OP_ROLL OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUAL OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_BOOLOR OP_VERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUAL OP_IF OP_1 OP_OUTPUTTOKENCATEGORY OP_0 OP_EQUALVERIFY OP_ENDIF OP_2DROP OP_2DROP OP_1 OP_ENDIF",
+  "source": "pragma cashscript ^0.14.0;\n\n// GigPact R-0 - state 1 of 4: FUNDED (BCH mode).\n// Paths: F1 accept (worker), F2 cancel (employer).\n// Spec: Architecture v1.1 sections 2.1, 2.2, 9.2, 9.3. Every path needs a sponsor input.\ncontract GigPactFunded(\n    pubkey pkV,          // employer role key (not the payout address)\n    pubkey pkW,          // worker role key\n    bytes lockV,         // employer payout locking bytecode\n    bytes acceptedLock,  // locking bytecode of the next state (Accepted)\n    int fundedValue,     // F_a: agreed fee, satoshis\n    int fA,              // arbiter fee, satoshis\n    int dustSafe         // DUST_SAFE, satoshis\n) {\n    // F1: worker accepts. Only an exactly funded UTXO passes. Output 0 = Accepted, value F.\n    function accept(sig sigW) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n\n        // 9.2 exact funding and 9.3 fixed-parameter limits (no multiplication)\n        require(F == fundedValue);\n        require(fA >= dustSafe);\n        require(fA + fA + fA + fA <= fundedValue);\n        require(fundedValue - fA >= dustSafe + dustSafe);\n        require(fundedValue / 2 >= dustSafe);\n\n        require(checkSig(sigW, pkW));\n\n        require(tx.outputs[0].lockingBytecode == acceptedLock);\n        require(tx.outputs[0].value == F);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs.length == 1 || tx.outputs.length == 2);\n        if (tx.outputs.length == 2) {\n            require(tx.outputs[1].tokenCategory == 0x);\n        }\n    }\n\n    // F2: employer takes the UTXO back, only while still Funded. Output 0 = lockV, value F.\n    function cancel(sig sigV) {\n        require(this.activeInputIndex == 0);\n        require(tx.inputs.length >= 2);\n        require(tx.inputs.length <= 3);\n        require(tx.inputs[0].tokenCategory == 0x);\n        require(tx.inputs[1].tokenCategory == 0x);\n        if (tx.inputs.length == 3) {\n            require(tx.inputs[2].tokenCategory == 0x);\n        }\n        int F = tx.inputs[this.activeInputIndex].value;\n        require(F >= dustSafe);\n\n        require(checkSig(sigV, pkV));\n\n        require(tx.outputs[0].lockingBytecode == lockV);\n        require(tx.outputs[0].value == F);\n        require(tx.outputs[0].tokenCategory == 0x);\n        require(tx.outputs.length == 1 || tx.outputs.length == 2);\n        if (tx.outputs.length == 2) {\n            require(tx.outputs[1].tokenCategory == 0x);\n        }\n    }\n}\n",
+  "fingerprint": "59cb515c0f495503923ce1ac9f8081a5af88aade82340d2305c5c0665566bd46",
+  "debug": {
+    "bytecode": "5779009c63c0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c67656799d56795879a26956795779935779935779935679a1695579577a945779587993a269557a5296567aa269567a537aad00cd547a8800cc9d00d10088c4519cc4529c9b69c4529c6351d10088686d755167577a519dc0009dc352a269c353a16900ce008851ce0088c3539c6352ce008868c0c676587aa269577a7bad00cd537a8800cc9d00d10088c4519cc4529c9b69c4529c6351d10088686d6d5168",
+    "sourceMap": "16:4:43:5;;;;;17:16:17:37;:41::42;:8::44:1;18:16:18:32:0;:36::37;:16:::1;:8::39;19:16:19:32:0;:36::37;:16:::1;:8::39;20:26:20:27:0;:16::42:1;:46::48:0;:8::50:1;21:26:21:27:0;:16::42:1;:46::48:0;:8::50:1;22:12:22:28:0;:32::33;:12:::1;:35:24:9:0;23:30:23:31;:20::46:1;:50::52:0;:12::54:1;22:35:24:9;25:26:25:47:0;:16::54:1;28::28:17:0;:21::32;;:8::34:1;29:16:29:18:0;;:22::30;;:16:::1;:8::32;30:16:30:18:0;;:21::23;;:16:::1;:26::28:0;;:16:::1;:31::33:0;;:16:::1;:37::48:0;;:16:::1;:8::50;31:16:31:27:0;;:30::32;;:16:::1;:36::44:0;;:47::55;;:36:::1;:16;:8::57;32:16:32:27:0;;:30::31;:16:::1;:35::43:0;;:16:::1;:8::45;34:25:34:29:0;;:31::34;;:8::37:1;36:27:36:28:0;:16::45:1;:49::61:0;;:8::63:1;37:27:37:28:0;:16::35:1;:8::42;38:27:38:28:0;:16::43:1;:47::49:0;:8::51:1;39:16:39:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;40:12:40:29:0;:33::34;:12:::1;:36:42:9:0;41:31:41:32;:20::47:1;:51::53:0;:12::55:1;40:36:42:9;16:30:43:5;;;:4;46::67::0;;;;47:16:47:37;:41::42;:8::44:1;48:16:48:32:0;:36::37;:16:::1;:8::39;49:16:49:32:0;:36::37;:16:::1;:8::39;50:26:50:27:0;:16::42:1;:46::48:0;:8::50:1;51:26:51:27:0;:16::42:1;:46::48:0;:8::50:1;52:12:52:28:0;:32::33;:12:::1;:35:54:9:0;53:30:53:31;:20::46:1;:50::52:0;:12::54:1;52:35:54:9;55:26:55:47:0;:16::54:1;56::56:17:0;:21::29;;:16:::1;:8::31;58:25:58:29:0;;:31::34;:8::37:1;60:27:60:28:0;:16::45:1;:49::54:0;;:8::56:1;61:27:61:28:0;:16::35:1;:8::42;62:27:62:28:0;:16::43:1;:47::49:0;:8::51:1;63:16:63:33:0;:37::38;:16:::1;:42::59:0;:63::64;:42:::1;:16;:8::66;64:12:64:29:0;:33::34;:12:::1;:36:66:9:0;65:31:65:32;:20::47:1;:51::53:0;:12::55:1;64:36:66:9;46:30:67:5;;;6:0:68:1",
+    "logs": [],
+    "requires": [
+      {
+        "ip": 14,
+        "line": 17
+      },
+      {
+        "ip": 18,
+        "line": 18
+      },
+      {
+        "ip": 22,
+        "line": 19
+      },
+      {
+        "ip": 26,
+        "line": 20
+      },
+      {
+        "ip": 30,
+        "line": 21
+      },
+      {
+        "ip": 38,
+        "line": 23
+      },
+      {
+        "ip": 45,
+        "line": 28
+      },
+      {
+        "ip": 51,
+        "line": 29
+      },
+      {
+        "ip": 66,
+        "line": 30
+      },
+      {
+        "ip": 78,
+        "line": 31
+      },
+      {
+        "ip": 86,
+        "line": 32
+      },
+      {
+        "ip": 91,
+        "line": 34
+      },
+      {
+        "ip": 96,
+        "line": 36
+      },
+      {
+        "ip": 99,
+        "line": 37
+      },
+      {
+        "ip": 103,
+        "line": 38
+      },
+      {
+        "ip": 111,
+        "line": 39
+      },
+      {
+        "ip": 119,
+        "line": 41
+      },
+      {
+        "ip": 131,
+        "line": 47
+      },
+      {
+        "ip": 135,
+        "line": 48
+      },
+      {
+        "ip": 139,
+        "line": 49
+      },
+      {
+        "ip": 143,
+        "line": 50
+      },
+      {
+        "ip": 147,
+        "line": 51
+      },
+      {
+        "ip": 155,
+        "line": 53
+      },
+      {
+        "ip": 163,
+        "line": 56
+      },
+      {
+        "ip": 167,
+        "line": 58
+      },
+      {
+        "ip": 172,
+        "line": 60
+      },
+      {
+        "ip": 175,
+        "line": 61
+      },
+      {
+        "ip": 179,
+        "line": 62
+      },
+      {
+        "ip": 187,
+        "line": 63
+      },
+      {
+        "ip": 195,
+        "line": 65
+      }
+    ]
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.14.0",
+    "options": {
+      "enforceFunctionParameterTypes": true,
+      "enforceLocktimeGuard": true
+    }
+  },
+  "updatedAt": "2026-11-14T17:14:47.659Z"
+}

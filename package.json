@@ -1,0 +1,13 @@
+{
+  "name": "gigpact",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:contracts": "node scripts/build-contracts.mjs"
+  },
+  "devDependencies": {
+    "cashc": "0.14.0"
+  }
+}

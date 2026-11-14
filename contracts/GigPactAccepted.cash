@@ -1,0 +1,107 @@
+pragma cashscript ^0.14.0;
+
+// GigPact R-0 - state 2 of 4: ACCEPTED (BCH mode).
+// Paths: A1 pay (employer), A2 waive (worker), A3 claim (worker, time >= T_end),
+//        A4 open dispute (employer, time >= T_A4 = T_end + G).
+// Times only give a lower bound. Spec: Architecture v1.1 sections 2.2, 3.
+contract GigPactAccepted(
+    pubkey pkV,
+    pubkey pkW,
+    bytes lockV,
+    bytes lockW,
+    bytes requestedLock,       // next state after A3
+    bytes disputeRefundLock,   // next state after A4 (Dispute with phi = 50)
+    int tEnd,                  // T_end, absolute lock time
+    int tA4,                   // T_A4 = T_end + G (G = 7 days), absolute lock time
+    int dustSafe
+) {
+    // A1: employer pays the worker. Output 0 = lockW, value F.
+    function pay(sig sigV) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(checkSig(sigV, pkV));
+        require(tx.outputs[0].lockingBytecode == lockW);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+
+    // A2: worker waives, full refund. Output 0 = lockV, value F.
+    function waive(sig sigW) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(checkSig(sigW, pkW));
+        require(tx.outputs[0].lockingBytecode == lockV);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+
+    // A3: worker claims, not before T_end. Output 0 = Requested, value F.
+    function claim(sig sigW) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(tx.time >= tEnd);
+        require(checkSig(sigW, pkW));
+        require(tx.outputs[0].lockingBytecode == requestedLock);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+
+    // A4: employer opens a dispute, not before T_A4. Output 0 = Dispute (phi = 50), value F.
+    function openDispute(sig sigV) {
+        require(this.activeInputIndex == 0);
+        require(tx.inputs.length >= 2);
+        require(tx.inputs.length <= 3);
+        require(tx.inputs[0].tokenCategory == 0x);
+        require(tx.inputs[1].tokenCategory == 0x);
+        if (tx.inputs.length == 3) {
+            require(tx.inputs[2].tokenCategory == 0x);
+        }
+        int F = tx.inputs[this.activeInputIndex].value;
+        require(F >= dustSafe);
+        require(tx.time >= tA4);
+        require(checkSig(sigV, pkV));
+        require(tx.outputs[0].lockingBytecode == disputeRefundLock);
+        require(tx.outputs[0].value == F);
+        require(tx.outputs[0].tokenCategory == 0x);
+        require(tx.outputs.length == 1 || tx.outputs.length == 2);
+        if (tx.outputs.length == 2) {
+            require(tx.outputs[1].tokenCategory == 0x);
+        }
+    }
+}
