@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chain, run, keys, tpl, locks, lockOf, P, SH, lineIn, results } from './harness.mjs';
-import { randomToken } from 'cashscript';
+import { randomToken, randomNFT } from 'cashscript';
 
 const C = chain();
 const Fa = P.Fa, fA = P.fA, D = P.dust;
@@ -34,16 +34,18 @@ const sig = (p, who, sh) => (p.s ? [tpl(keys[who ?? p.s], sh)] : []);
 function spec(p, o = {}) {
   const F = o.F ?? p.F;
   const outs = (o.outs ?? p.outs(F)).map(([to, amount, token]) => ({ to, amount, token }));
-  const s = { contract: p.c, fn: p.fn, args: o.args ?? sig(p, o.who, o.sh), value: F, outs, sponsors: o.sponsors ?? [20000n], contractIdx: o.contractIdx, sponsorTokenIdx: o.sponsorTokenIdx };
+  const s = { contract: p.c, fn: p.fn, args: o.args ?? sig(p, o.who, o.sh), value: F, outs, sponsors: o.sponsors ?? [20000n], contractIdx: o.contractIdx, sponsorTokenIdx: o.sponsorTokenIdx, sponsorToken: o.sponsorToken, contractToken: o.contractToken, version: o.version };
   const tv = o.tv ?? p.t?.v;
   if (p.t) { if (p.t.k === 'locktime') s.locktime = tv; else s.seq = tv; }
+  if (o.seq !== undefined) s.seq = o.seq;
+  if (o.locktime !== undefined) s.locktime = o.locktime;
   return s;
 }
 const L = (p, re, opts) => lineIn(p.cn, p.fn, re, opts);
 const LO = (p, re) => lineIn(p.cn, p.fn, re, { after: p.after });
 function exp(p, name, r, ok, line) {
-  const good = ok ? r.ok : (!r.ok && (line === undefined || r.line === line));
-  results.push({ path: p.id, case: name, expect: ok ? 'pass' : 'fail', line: line ?? null, got: r.ok ? 'pass' : 'fail', gotLine: r.line ?? null, ok: good, err: r.ok ? undefined : r.err });
+  const good = ok ? r.ok : (!r.ok && r.kind === 'vm' && (line === undefined || r.line === line)); // failures must be VM rejections, not SDK/builder rejections
+  results.push({ path: p.id, case: name, expect: ok ? 'pass' : 'fail', line: line ?? null, got: r.ok ? 'pass' : 'fail', kind: r.ok ? undefined : r.kind, gotLine: r.line ?? null, ok: good, err: r.ok ? undefined : r.err });
   assert.ok(good, `${p.id} ${name}: expected ${ok ? 'pass' : 'fail@' + line}, got ${r.ok ? 'pass' : r.err}`);
 }
 const okC = (p, name, o) => exp(p, name, run(spec(p, o)), true);
@@ -54,6 +56,7 @@ for (const p of PATHS) {
     okC(p, 'valid, 2 inputs, exact outputs');
     okC(p, 'valid, 3 inputs (2 sponsors)', { sponsors: [20000n, 20000n] });
     if (p.outs(p.F).length < p.max) okC(p, 'valid, extra sponsor-change output', { outs: [...p.outs(p.F), [locks.S, 1000n]] });
+    if (p.s) okC(p, 'explicit sighash 0x61 (ALL|UTXOS) passes', { sh: SH.H61 });
     for (const [n, sh] of [['0x41 (no UTXOS)', SH.H41], ['0xC1 (ANYONECANPAY)', SH.HC1]]) if (p.s) okC(p, `boundary G1-02: contract accepts sighash ${n}`, { sh });
   });
   test(`${p.id}: roles and signatures`, () => {
@@ -74,19 +77,17 @@ for (const p of PATHS) {
     noC(p, `too many outputs (${p.max + 1})`, { outs: [...base, ...Array.from({ length: p.max + 1 - base.length }, () => [locks.S, 1000n])] }, cnt);
     if (base.length > 1) assert.equal(run(spec(p, { outs: base.slice(0, base.length - 1) })).ok, false, 'too few outputs');
   });
-  test(`${p.id}: tokens`, () => {
-    const base = p.outs(p.F);
-    const tok = () => randomToken({ amount: 1n });
-    const w = base.map((x) => [...x]); w[0][2] = tok();
-    exp(p, 'token on out0', run(spec(p, { outs: w })), false);
-    exp(p, 'token on extra output', run(spec(p, { outs: [...base, [locks.S, 1000n, tok()]] })), false);
-    const k = base.length; // extra output index
-    if (k < p.max) {
-      const r = run(spec(p, { outs: [...base, [locks.S, 1000n, tok()]] }));
-      assert.equal(r.ok, false);
+  test(`${p.id}: tokens (fungible and NFT)`, () => {
+    const base = p.outs(p.F), k = base.length;
+    const kinds = { fungible: () => randomToken({ amount: 1n }), NFT: () => randomNFT() };
+    for (const [kn, mk] of Object.entries(kinds)) {
+      const w = base.map((x) => [...x]); w[0][2] = mk();
+      noC(p, `${kn} on out0`, { outs: w }, LO(p, /tx\.outputs\[0\]\.tokenCategory/));
+      noC(p, `${kn} on extra output idx ${k}`, { outs: [...base, [locks.S, 1000n, mk()]] }, LO(p, new RegExp(`tx\\.outputs\\[${k}\\]\\.tokenCategory`)));
+      noC(p, `${kn} on input0 (contract UTXO)`, { contractToken: mk() }, L(p, /tx\.inputs\[0\]\.tokenCategory/));
+      noC(p, `${kn} on input1`, { sponsorTokenIdx: 0, sponsorToken: mk() }, L(p, /tx\.inputs\[1\]\.tokenCategory/));
+      noC(p, `${kn} on input2 (3 inputs)`, { sponsors: [20000n, 20000n], sponsorTokenIdx: 1, sponsorToken: mk() }, L(p, /tx\.inputs\[2\]\.tokenCategory/));
     }
-    noC(p, 'token on input1', { sponsorTokenIdx: 0 }, L(p, /tx\.inputs\[1\]\.tokenCategory/));
-    noC(p, 'token on input2 (3 inputs)', { sponsors: [20000n, 20000n], sponsorTokenIdx: 1 }, L(p, /tx\.inputs\[2\]\.tokenCategory/));
   });
   test(`${p.id}: input shape`, () => {
     noC(p, 'single input (no sponsor)', { sponsors: [], outs: p.outs(p.F).map(([t, a], k) => [t, k === 0 ? a - 3000n : a]) }, L(p, /inputs\.length >= 2/));
@@ -103,8 +104,32 @@ for (const p of PATHS) {
     noC(p, `lock ${p.t.v - 1n} too early`, { tv: p.t.v - 1n }, line);
     okC(p, `lock ${p.t.v} exactly`, { tv: p.t.v });
     okC(p, `lock ${p.t.v + 1n} later`, { tv: p.t.v + 1n });
+    if (p.t.k === 'locktime') { // CLTV (tx.time)
+      noC(p, 'CLTV: contract input sequence final (0xffffffff)', { seq: 0xffffffff }, line);
+      noC(p, 'CLTV: locktime of wrong type (unix-time 1700000000 vs block height)', { locktime: 1700000000 }, line);
+      noC(p, 'CLTV: locktime 0', { locktime: 0 }, line);
+      okC(p, 'CLTV: non-final sequence 0xfffffffe', { seq: 0xfffffffe });
+      okC(p, 'CLTV: sequence 0 (non-final)', { seq: 0 });
+    } else { // CSV (this.age)
+      const v = Number(p.t.v);
+      noC(p, 'CSV: sequence 0 (no relative lock)', { seq: 0 }, line);
+      noC(p, 'CSV: sequence 0xffffffff (disabled)', { seq: 0xffffffff }, line);
+      noC(p, 'CSV: disable flag (bit 31) set with value', { seq: (0x80000000 | v) >>> 0 }, line);
+      noC(p, 'CSV: time-type flag (bit 22) set with value', { seq: 0x00400000 | v }, line);
+      okC(p, 'CSV: raw eval, tx version 2 (control for the raw evaluator)', { version: 2 });
+      const chk = (name, o, re) => { const r = run(spec(p, o)); const good = !r.ok && r.kind === 'vm' && re.test(r.err); results.push({ path: p.id, case: name, expect: 'fail', line: null, got: r.ok ? 'pass' : 'fail', kind: r.kind, ok: good, err: r.err }); assert.ok(good, `${p.id} ${name}: ${r.err}`); };
+      chk('CSV: raw eval, tx version 1 -> rejected by OP_CHECKSEQUENCEVERIFY (needs version >= 2)', { version: 1 }, /OP_CHECKSEQUENCEVERIFY requires transaction version 2/);
+      chk('tx version 0 -> rejected by the VM version rule (not a CSV result)', { version: 0 }, /version must be either 1 or 2/);
+      chk('tx version 3 -> rejected by the VM version rule (only 1 or 2 are valid)', { version: 3 }, /version must be either 1 or 2/);
+    }
   });
 }
+
+test('sighash: on-wire hashtype bytes are 0x61 / 0x41 / 0xC1 (SDK enum omits FORKID 0x40)', () => {
+  const wire = (sh) => { const sg = tpl(keys.W, sh).generateSignature(new Uint8Array(32)); return sg[sg.length - 1]; };
+  assert.equal(wire(SH.H61), 0x61); assert.equal(wire(SH.H41), 0x41); assert.equal(wire(SH.HC1), 0xc1);
+  assert.equal(tpl(keys.W).sighashType, SH.H61, 'SDK default equals the 0x61 template; tests still pass sh explicitly');
+});
 
 // ---- path-specific cases ----
 const P_ = Object.fromEntries(PATHS.map((p) => [p.id, p]));
@@ -159,14 +184,6 @@ test('D4 fallback, phi = 100 / 50 / invalid', () => {
   for (const bad of [0n, 1n, 51n, 75n, 99n, 101n, -50n]) {
     const d = C.dispute(bad), p = { ...P_.D4a, c: d };
     noC(p, `invalid phi=${bad}`, {}, lineIn('GigPactDispute', 'fallback', /phi == 100 \|\| phi == 50/));
-  }
-});
-test('D4 / C1 relative lock: sequence flags', () => {
-  // this.age needs a block-height relative lock (type bit 22 clear); a time-type lock must not satisfy it
-  for (const id of ['C1', 'D4a']) {
-    const p = P_[id], line = L(p, p.t.re);
-    noC(p, 'seq 0 (no relative lock)', { tv: 0n }, line);
-    noC(p, 'seq 0xffffffff (disabled)', { tv: 0xffffffffn }, undefined);
   }
 });
 test('I12: constructor-parameter mismatch is not caught by the contract (boundary G1-03)', () => {
