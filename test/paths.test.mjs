@@ -75,7 +75,7 @@ for (const p of PATHS) {
     });
     const cnt = LO(p, /tx\.outputs\.length ==/);
     noC(p, `too many outputs (${p.max + 1})`, { outs: [...base, ...Array.from({ length: p.max + 1 - base.length }, () => [locks.S, 1000n])] }, cnt);
-    if (base.length > 1) assert.equal(run(spec(p, { outs: base.slice(0, base.length - 1) })).ok, false, 'too few outputs');
+    if (base.length > 1) noC(p, `too few outputs (${base.length - 1}): out-of-range introspection`, { outs: base.slice(0, base.length - 1) }, LO(p, new RegExp(`tx\\.outputs\\[${base.length - 1}\\]\\.lockingBytecode`)));
   });
   test(`${p.id}: tokens (fungible and NFT)`, () => {
     const base = p.outs(p.F), k = base.length;

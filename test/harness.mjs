@@ -72,7 +72,7 @@ export function run(spec) {
 
 function classify(e) {
   const m = String(e.message ?? e).split('\n')[0];
-  const mm = m.match(/\.cash:(\d+) Require/);
+  const mm = m.match(/\.cash:(\d+) (?:Require|Error)/);
   // 'vm' = rejected by script evaluation in the libauth VM; 'builder' = rejected by CashScript/SDK before evaluation
   return { ok: false, err: m, line: mm ? Number(mm[1]) : undefined, kind: /at input \d+ in contract/.test(m) ? 'vm' : 'builder' };
 }
