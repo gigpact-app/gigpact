@@ -53,7 +53,9 @@ contract GigPactFunded(
             require(tx.inputs[2].tokenCategory == 0x);
         }
         int F = tx.inputs[this.activeInputIndex].value;
-        require(F >= dustSafe);
+        // G1-01: no value floor on F2 in the contract. This is NOT a recovery guarantee:
+        // a refund of a sub-DUST_SAFE UTXO also needs a sponsor input for the fee and
+        // network relay policy to accept the output (measured in G7).
 
         require(checkSig(sigV, pkV));
 
