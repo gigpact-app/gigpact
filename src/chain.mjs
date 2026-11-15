@@ -4,7 +4,8 @@
 // is where I12 is enforced and verified.
 import { readFileSync } from 'node:fs';
 import { Contract, SignatureTemplate } from 'cashscript';
-import { cashAddressToLockingBytecode, binToHex, hexToBin, secp256k1 } from '@bitauth/libauth';
+import { cashAddressToLockingBytecode, binToHex, secp256k1 } from '@bitauth/libauth';
+import { strictBytes } from './errors.mjs';
 
 export const BIP68_MAX_BLOCKS = 0xffffn; // largest block-based relative lock (low 16 bits of nSequence)
 export const DEFAULTS = Object.freeze({ dv: 432n, l: 2016n, G: 1008n, dust: 1000n }); // blocks; G = 7 days
@@ -13,7 +14,7 @@ const art = (n) => JSON.parse(readFileSync(new URL(`../artifacts/${n}.json`, imp
 export const artifacts = () => Object.fromEntries(ART.map((n) => [n, art(n)]));
 
 const hex = (b) => (typeof b === 'string' ? b : binToHex(b));
-const bytes = (b) => (typeof b === 'string' ? hexToBin(b) : b);
+const bytes = (b) => { try { return strictBytes(b); } catch (e) { throw new ParamError(e.message); } };
 export class ParamError extends Error { constructor(m) { super(m); this.name = 'ParamError'; } }
 const need = (c, m) => { if (!c) throw new ParamError(m); };
 
@@ -91,8 +92,10 @@ export function assertChain(chain) {
 
 // Canonical text of a parameter set (bigint / bytes safe), for exact comparison of two jobs or chains.
 export function canonParams(p) {
-  const f = (v) => (typeof v === 'bigint' ? `${v}n` : v instanceof Uint8Array ? binToHex(v) : v && typeof v === 'object' ? `{${Object.keys(v).sort().map((k) => `${k}:${f(v[k])}`).join(',')}}` : String(v));
-  return f(p);
+  // type-tagged and key-sorted, so different shapes can never print the same text
+  const norm = (v) => (typeof v === 'bigint' ? ['b', v.toString()] : v instanceof Uint8Array ? ['x', binToHex(v)] : Array.isArray(v) ? ['a', ...v.map(norm)]
+    : v && typeof v === 'object' ? ['o', ...Object.keys(v).sort().map((k) => [k, norm(v[k])])] : ['p', typeof v, String(v)]);
+  return JSON.stringify(norm(p));
 }
 
 // Deep copy of normalized parameters (bytes and bigint safe) so a stored job cannot be changed through a shared object.

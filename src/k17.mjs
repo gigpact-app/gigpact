@@ -9,9 +9,9 @@ import { assertChain, canonParams, cloneParams } from './chain.mjs';
 // A job record is bound to ONE chain: its parameters and every contract address (I12).
 export const newJob = (chain) => ({ params: cloneParams(chain.params), addresses: { ...chain.addresses } });
 
-export const outpointKey = (u) => `${u.txid}:${u.vout}`;
-
 const lc = (t) => String(t).toLowerCase();
+export const outpointKey = (u) => `${String(u.txid).toLowerCase()}:${u.vout}`;
+
 export function declareFunding(job, outpoint) {
   checkOutpoint(outpoint, 'declared funding outpoint');
   if (job.declaredFunding) throw new SpendError('K17AlreadyDeclared', 'a job has exactly one declared funding outpoint');
@@ -22,8 +22,8 @@ export function declareFunding(job, outpoint) {
 // utxos: everything currently at the Funded address.
 export function classifyFunded(job, utxos) {
   const d = job.declaredFunding;
-  const declared = d ? utxos.find((u) => lc(u.txid) === d.txid && u.vout === d.vout) : undefined;
-  const foreign = utxos.filter((u) => !d || !(lc(u.txid) === d.txid && u.vout === d.vout));
+  const declared = d ? utxos.find((u) => lc(u.txid) === lc(d.txid) && u.vout === d.vout) : undefined;
+  const foreign = utxos.filter((u) => !d || !(lc(u.txid) === lc(d.txid) && u.vout === d.vout));
   return { declared, foreign, declaredMissing: !!d && !declared, undeclared: !d };
 }
 
@@ -44,7 +44,7 @@ export function assertF1Funding(job, utxo, chain) {
   assertJobChain(job, chain);
   const d = job.declaredFunding;
   if (!d) throw new SpendError('K17NotDeclared', 'job has no declared funding outpoint');
-  if (lc(utxo.txid) !== d.txid || utxo.vout !== d.vout) throw new SpendError('K17Mismatch', `F1 must spend the declared outpoint ${d.txid}:${d.vout}, not ${utxo.txid}:${utxo.vout}`);
+  if (lc(utxo.txid) !== lc(d.txid) || utxo.vout !== d.vout) throw new SpendError('K17Mismatch', `F1 must spend the declared outpoint ${d.txid}:${d.vout}, not ${utxo.txid}:${utxo.vout}`);
   if (utxo.satoshis !== job.params.F || d.satoshis !== job.params.F) throw new SpendError('K17Value', 'funding value must equal F');
   return true;
 }

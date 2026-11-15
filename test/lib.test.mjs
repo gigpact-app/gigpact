@@ -4,8 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SignatureTemplate, randomUtxo, randomToken } from 'cashscript';
 import { provider, keys, tpl, locks, VM_TARGET } from './harness.mjs';
-import { buildChain, verifyChain, assertChain, normalize, ParamError, DEFAULTS, BIP68_MAX_BLOCKS } from '../src/chain.mjs';
-import { PATHS, PATH_IDS, planSpend, buildTx, inspectTx, csvSequence, SEQ_NONFINAL, MAX_FEE_RATE, MIN_OUTPUT, SpendError } from '../src/spend.mjs';
+import { buildChain, verifyChain, assertChain, canonParams, normalize, ParamError, DEFAULTS, BIP68_MAX_BLOCKS } from '../src/chain.mjs';
+import { PATHS, PATH_IDS, planSpend, buildTx, inspectTx, csvSequence, changeFloor, SEQ_NONFINAL, MAX_FEE_RATE, MIN_OUTPUT, SpendError } from '../src/spend.mjs';
 import { declareFunding, classifyFunded, assertF1Funding, newJob } from '../src/k17.mjs';
 import { binToHex, hexToBin, decodeTransactionBch, encodeTransactionBch, secp256k1, createVirtualMachineBch2025, createVirtualMachineBch2026 } from '@bitauth/libauth';
 
@@ -14,7 +14,7 @@ const base = () => ({ pk: { V: pk(keys.V), W: pk(keys.W), A: pk(keys.A) }, lock:
 const chainOf = (p = base()) => buildChain(p, { provider });
 // unique synthetic outpoints (cashscript's randomUtxo draws txids from only 10,000 values, which can collide and trip SponsorDuplicate)
 let outpointCounter = 0;
-const fake = (sats) => { outpointCounter += 1; return { txid: outpointCounter.toString(16).padStart(64, '0'), vout: outpointCounter % 4, satoshis: sats }; };
+const fake = (sats) => { outpointCounter += 1; return { txid: 'ab'.repeat(30) + outpointCounter.toString(16).padStart(4, '0'), vout: outpointCounter % 4, satoshis: sats }; };
 // a synthetic contract UTXO that really sits at the given state's lock (explicit lockingBytecode, as the library now requires)
 const at = (chain, key, sats) => ({ ...fake(sats), lockingBytecode: Uint8Array.from(chain.locks[key]) });
 const sponsor = (sats = 20000n, extra = {}) => ({ ...fake(sats), lockingBytecode: locks.S, ...extra });
@@ -524,7 +524,9 @@ test('K17 helpers: outpoints are validated and compared case-insensitively; forg
 });
 
 test('input hygiene: ctx null, fractional counts, phi on single-phi paths, invalid public keys', () => {
-  assert.ok(planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor()], ctx: null }));
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor()], ctx: null }), 'BadContext');
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor()], ctx: 'abc' }), 'BadContext');
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor()], ctx: [] }), 'BadContext');
   throwsCode(() => planSpend({ chain: C, path: 'C1', utxo: at(C, 'requested', 100000n), sponsors: [sponsor()], ctx: { confirmations: 1.5 } }), 'BadContext');
   throwsCode(() => planSpend({ chain: C, path: 'A3', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor()], ctx: { tipHeight: -1 } }), 'BadContext');
   assert.equal(planSpend({ chain: C, path: 'D1', utxo: at(C, 'd100', 100000n), sponsors: [sponsor()], ctx: { phi: 50 } }).phi, 100, 'D1-D3 only exist on the phi=100 instance');
@@ -534,4 +536,86 @@ test('input hygiene: ctx null, fractional counts, phi on single-phi paths, inval
   // normalize copies the caller's arrays
   const b = base(); const n = normalize(b); b.pk.V[1] ^= 1; b.lock.W[0] ^= 1;
   assert.notEqual(binToHex(n.pk.V), binToHex(b.pk.V)); assert.notEqual(binToHex(n.lock.W), binToHex(b.lock.W));
+});
+
+
+// ---- Review round 4 ----------------------------------------------------------------------------
+test('hostile sponsors array: Symbol.species / own map cannot bypass validation', () => {
+  const good = sponsor(30000n);
+  const evil = [{ ...sponsor(5n), lockingBytecode: C.locks.accepted, token: { amount: 1n, category: '11'.repeat(32) } }, sponsor(9n), sponsor(9n)];
+  const a = [good]; a.constructor = { [Symbol.species]: function () { const o = []; o.map = () => evil; return o; } };
+  const plan = planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: a, ctx: {} });
+  assert.equal(plan.sponsors.length, 1); assert.equal(plan.sponsors[0].satoshis, 30000n);
+  const b = [good]; b.map = () => evil;
+  assert.equal(planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: b, ctx: {} }).sponsors.length, 1);
+});
+
+test('malformed hex is refused, never silently reinterpreted', () => {
+  const s = sponsor(30000n);
+  const mk = (lock) => planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [{ ...s, lockingBytecode: lock }], ctx: {} });
+  for (const bad of ['abc', 'zzzz', '76a914zz', '0x51', ' 51', '5']) throwsCode(() => mk(bad), 'BadBytes');
+  throwsCode(() => mk([0x51, 300]), 'BadBytes'); throwsCode(() => mk({ length: 1 }), 'BadBytes'); throwsCode(() => mk(5), 'BadBytes');
+  assert.ok(mk(binToHex(locks.S).toUpperCase()), 'valid upper-case hex is fine');
+  const plan = planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [s], ctx: {} });
+  const goodHex = binToHex(locks.S);
+  for (const bad of ['76a914zz' + goodHex.slice(8), goodHex.slice(1), goodHex + 'z', 'abc']) assert.throws(() => buildTx(plan, { provider, keys, SignatureTemplate, changeLock: bad }), (e) => e.code === 'BadBytes' || e.code === 'BadChangeLock');
+  assert.throws(() => planSpend({ chain: C, path: 'A1', utxo: { ...at(C, 'accepted', 100000n), lockingBytecode: 'abc' }, sponsors: [s], ctx: {} }), (e) => e.code === 'BadBytes');
+  assert.throws(() => normalize({ ...base(), lock: { ...base().lock, V: 'zz' } }), (e) => e instanceof ParamError);
+  assert.throws(() => normalize({ ...base(), pk: { ...base().pk, V: 'abc' } }), (e) => e instanceof ParamError);
+});
+
+test('change lock must be a standard spendable shape', () => {
+  const plan = planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor(30000n)], ctx: {} });
+  const p2pkh = locks.S, p2sh20 = Uint8Array.from([0xa9, 0x14, ...new Uint8Array(20), 0x87]), p2sh32 = Uint8Array.from([0xaa, 0x20, ...new Uint8Array(32), 0x87]);
+  for (const ok of [p2pkh, p2sh20, p2sh32]) assert.ok(buildTx(plan, { provider, keys, SignatureTemplate, changeLock: ok }).hasChange);
+  for (const bad of [Uint8Array.from([0x00, 0x6a]), Uint8Array.from([0x4c]), Uint8Array.from([0x00, 0x00]), Uint8Array.from([0x51]), p2pkh.slice(0, 24), Uint8Array.from([0x6a, ...p2pkh.slice(1)])])
+    assert.throws(() => buildTx(plan, { provider, keys, SignatureTemplate, changeLock: bad }), (e) => e.code === 'BadChangeLock', binToHex(bad));
+});
+
+test('outpoint comparisons are case-insensitive end to end (txids with letters, mixed case)', () => {
+  const lower = at(C, 'funded', C.params.F); assert.notEqual(lower.txid, lower.txid.toUpperCase(), 'fixture txid contains letters');
+  const upper = { ...lower, txid: lower.txid.toUpperCase() };
+  const job = declareFunding(newJob(C), upper);
+  assert.equal(job.declaredFunding.txid, lower.txid);
+  const plan = planSpend({ chain: C, path: 'F1', utxo: upper, sponsors: [sponsor()], ctx: {}, job });
+  const r = buildTx(plan, { provider, keys, SignatureTemplate, changeLock: locks.S });
+  assert.ok(inspectTx(plan, r.hex, locks.S)); r.builder.debug();
+  const planL = planSpend({ chain: C, path: 'F1', utxo: lower, sponsors: [sponsor()], ctx: {}, job });
+  assert.ok(inspectTx(planL, r.hex.length ? buildTx(planL, { provider, keys, SignatureTemplate, changeLock: locks.S }).hex : '', locks.S));
+  assert.equal(classifyFunded(job, [upper]).declared?.txid, upper.txid); assert.equal(classifyFunded(job, [lower]).foreign.length, 0);
+  // a stored job with an upper-case declared txid still matches
+  assert.ok(assertF1Funding({ ...job, declaredFunding: { ...job.declaredFunding, txid: upper.txid } }, lower, C));
+  // duplicates are detected across case, for sponsors and for the contract outpoint
+  const s = sponsor(); const cu = at(C, 'accepted', 100000n);
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: cu, sponsors: [s, { ...sponsor(), txid: s.txid.toUpperCase(), vout: s.vout }], ctx: {} }), 'SponsorDuplicate');
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: cu, sponsors: [{ ...sponsor(), txid: cu.txid.toUpperCase(), vout: cu.vout }], ctx: {} }), 'SponsorDuplicate');
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: { ...cu, txid: cu.txid.toUpperCase() }, sponsors: [{ ...sponsor(), txid: cu.txid, vout: cu.vout }], ctx: {} }), 'SponsorDuplicate');
+  // inspectTx matches an upper-case plan txid with the (lower-case) serialized bytes
+  const plan2 = planSpend({ chain: C, path: 'A1', utxo: { ...cu, txid: cu.txid.toUpperCase() }, sponsors: [{ ...s, txid: s.txid.toUpperCase() }], ctx: {} });
+  const r2 = buildTx(plan2, { provider, keys, SignatureTemplate, changeLock: locks.S }); assert.ok(inspectTx(plan2, r2.hex, locks.S));
+});
+
+test('small hygiene: dryRun must be exactly true, unknown/inherited path names, canonParams is injective', () => {
+  const u = () => at(C, 'accepted', 100000n);
+  throwsCode(() => planSpend({ chain: C, path: 'A3', utxo: u(), sponsors: [sponsor()], ctx: { dryRun: 'false' } }), 'MissingContext');
+  throwsCode(() => planSpend({ chain: C, path: 'A3', utxo: u(), sponsors: [sponsor()], ctx: { dryRun: 1 } }), 'MissingContext');
+  assert.ok(planSpend({ chain: C, path: 'A3', utxo: u(), sponsors: [sponsor()], ctx: { dryRun: true } }));
+  for (const p of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) throwsCode(() => planSpend({ chain: C, path: p, utxo: u(), sponsors: [sponsor()], ctx: {} }), 'UnknownPath');
+  assert.notEqual(canonParams({ tA4: '5n,tEnd:6n' }), canonParams({ tA4: 5n, tEnd: 6n }));
+  assert.notEqual(canonParams({ a: '5n' }), canonParams({ a: 5n })); assert.notEqual(canonParams({ a: 5n }), canonParams({ a: 5 }));
+  assert.notEqual(canonParams({ a: new Uint8Array([1]) }), canonParams({ a: '01' }));
+  assert.equal(canonParams({ b: 1n, a: 2n }), canonParams({ a: 2n, b: 1n }), 'key order does not matter');
+  const job = jobFor(C, at(C, 'funded', C.params.F));
+  throwsCode(() => planSpend({ chain: C, path: 'F1', utxo: { ...at(C, 'funded', C.params.F), ...job.declaredFunding, lockingBytecode: C.locks.funded }, sponsors: [sponsor()], ctx: {}, job: { ...job, params: { ...job.params, tA4: 'x', tEnd: undefined } } }), 'K17ParamMismatch');
+});
+
+test('change floor depends on the change script length (P2SH32 needs 576, P2PKH 546) and is exact at the boundary', () => {
+  const p2sh32 = Uint8Array.from([0xaa, 0x20, ...new Uint8Array(32).fill(7), 0x87]);
+  assert.equal(changeFloor(locks.S), 546n); assert.equal(changeFloor(p2sh32), 576n);
+  const build = (S, cl) => buildTx(planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor(S)], ctx: {} }), { provider, keys, SignatureTemplate, changeLock: cl });
+  const f = build(40000n, p2sh32).fee;           // fee with a P2SH32 change output (a 10-byte larger output than P2PKH)
+  const at576 = build(f + 576n, p2sh32), at575 = build(f + 575n, p2sh32);
+  assert.equal(at576.hasChange, true); assert.equal(at576.change, 576n);
+  assert.equal(at575.hasChange, false); assert.equal(at575.change, 0n); assert.equal(at575.fee, f + 575n);
+  for (const r of [at576, at575]) { const tx = decode(r.hex); assert.equal(tx.outputs.length, r.hasChange ? 2 : 1); }
 });
