@@ -19,7 +19,6 @@ const chain = buildChain(params, { provider });
 const rec = []; const note = (name, ok, detail = {}) => rec.push({ name, ok, level: 'regtest', ...detail });
 const hexOf = (b) => binToHex(Uint8Array.from(b));
 const addr = (lb) => lockingBytecodeToCashAddress({ bytecode: lb, prefix: 'bchtest' }).address;
-const SCRIPT_FAIL = /mandatory-script-verify-flag-failed/;
 let nodeInfo; const st = {};
 
 before(async () => { nodeInfo = await startNode(); nodeInfo.subversion = (await rpc('getnetworkinfo')).subversion; });
@@ -98,8 +97,8 @@ test('setup: coinbases, tip = tEnd', async () => {
 test('C2 -> Dispute(100): D1 worker wins (arbitrator fee fA), with negatives', async () => {
   const d = await toDispute100(); note('C2 objectClaim accepted (Requested -> Dispute100)', true, { txids: d.txids });
   const g = dg(d, 'D1');
-  await expectReject('D1 signed by W instead of A', tamper(g, {}, { ...keys, A: keys.W }), SCRIPT_FAIL);
-  await expectReject('D1 arbitrator fee fA-1 (W gets +1)', tamper(g, { outs: [{ ...g.plan.outs[0], amount: g.plan.outs[0].amount + 1n }, { ...g.plan.outs[1], amount: g.plan.outs[1].amount - 1n }] }), SCRIPT_FAIL);
+  await expectReject('D1 signed by W instead of A', tamper(g, {}, { ...keys, A: keys.W }), /CHECK\(MULTI\)SIG/);
+  await expectReject('D1 arbitrator fee fA-1 (W gets +1)', tamper(g, { outs: [{ ...g.plan.outs[0], amount: g.plan.outs[0].amount + 1n }, { ...g.plan.outs[1], amount: g.plan.outs[1].amount - 1n }] }), /OP_NUMEQUALVERIFY/);
   const r = await send(g.hex); assert.ok(r.ok, JSON.stringify(r)); await mine(1, locks.X);
   const p = await payouts(r.result);
   assert.deepEqual(p[hexOf(locks.W)], [F - FA]); assert.deepEqual(p[hexOf(locks.A)], [FA]);
@@ -113,7 +112,7 @@ test('D2 employer wins; D3 split (with a wrong-split negative)', async () => {
   note('D2 accepted: V gets F-fA, A gets fA', true, { txid: r2.result });
   d = await toDispute100(); g = dg(d, 'D3');
   const o = g.plan.outs;
-  await expectReject('D3 unequal split (W +1, V -1)', tamper(g, { outs: [{ ...o[0], amount: o[0].amount + 1n }, { ...o[1], amount: o[1].amount - 1n }, o[2]] }), SCRIPT_FAIL);
+  await expectReject('D3 unequal split (W +1, V -1)', tamper(g, { outs: [{ ...o[0], amount: o[0].amount + 1n }, { ...o[1], amount: o[1].amount - 1n }, o[2]] }), /OP_NUMEQUALVERIFY/);
   const r3 = await send(g.hex); assert.ok(r3.ok, JSON.stringify(r3)); await mine(1, locks.X);
   p = await payouts(r3.result); assert.deepEqual(p[hexOf(locks.W)], [(F - FA) / 2n]); assert.deepEqual(p[hexOf(locks.V)], [(F - FA) / 2n]); assert.deepEqual(p[hexOf(locks.A)], [FA]);
   note('D3 accepted: 49000 / 49000 / fA', true, { txid: r3.result });
@@ -121,11 +120,11 @@ test('D2 employer wins; D3 split (with a wrong-split negative)', async () => {
 
 test('D5 employer pays out; D6 worker waives (signer checks)', async () => {
   let d = await toDispute100(); let g = dg(d, 'D5');
-  await expectReject('D5 signed by W instead of V', tamper(g, {}, { ...keys, V: keys.W }), SCRIPT_FAIL);
+  await expectReject('D5 signed by W instead of V', tamper(g, {}, { ...keys, V: keys.W }), /CHECK\(MULTI\)SIG/);
   let r = await send(g.hex); assert.ok(r.ok, JSON.stringify(r)); await mine(1, locks.X);
   assert.deepEqual((await payouts(r.result))[hexOf(locks.W)], [F]); note('D5 accepted: W gets F', true, { txid: r.result });
   d = await toDispute100(); g = dg(d, 'D6');
-  await expectReject('D6 signed by V instead of W', tamper(g, {}, { ...keys, W: keys.V }), SCRIPT_FAIL);
+  await expectReject('D6 signed by V instead of W', tamper(g, {}, { ...keys, W: keys.V }), /CHECK\(MULTI\)SIG/);
   r = await send(g.hex); assert.ok(r.ok, JSON.stringify(r)); await mine(1, locks.X);
   assert.deepEqual((await payouts(r.result))[hexOf(locks.V)], [F]); note('D6 accepted: V gets F', true, { txid: r.result });
 });
@@ -140,7 +139,7 @@ test('A4 openDispute: CLTV boundary tA4 = tEnd + G, then D4 on Dispute(50) pays 
   const re = await send(early.hex);
   note('A4 at tip=tA4-1', re.ok === false, { error: re.error }); assert.equal(re.ok, false); assert.match(re.error, /bad-txns-nonfinal/);
   await mine(1, locks.X);
-  await expectReject('A4 signed by W instead of V', tamper(mk({ utxo: acc, path: 'A4', sponsors: [sp], ctx: { tipHeight: tA4 } }), {}, { ...keys, V: keys.W }), SCRIPT_FAIL);
+  await expectReject('A4 signed by W instead of V', tamper(mk({ utxo: acc, path: 'A4', sponsors: [sp], ctx: { tipHeight: tA4 } }), {}, { ...keys, V: keys.W }), /CHECK\(MULTI\)SIG/);
   const a4 = await step('A4', 'accepted', acc, sp, { tipHeight: tA4 }); note('A4 at tip=tA4 accepted', true, { txid: a4.txid });
   const d50 = { ...(await outOf(a4.txid, hexOf(chain.locks.d50))), lockingBytecode: lk('d50') };
   await mine(2015 - (await confs(a4.txid)), locks.X);

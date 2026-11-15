@@ -80,11 +80,11 @@ test('A3 claim: CLTV boundary on the node (tip=tEnd-1 rejected, tip=tEnd accepte
   const early = planAndBuild({ utxo: acc, path: 'A3', sponsors: [sponsorUtxo(st.sp)], ctx: { dryRun: true } });
   const re = await send(early.hex);
   note('A3 at tip=tEnd-1', re.ok === false, { error: re.error });
-  assert.equal(re.ok, false, 'node must reject A3 at tip=tEnd-1');
+  assert.equal(re.ok, false, 'node must reject A3 at tip=tEnd-1'); assert.match(re.error, /bad-txns-nonfinal/);
   await mine(1, locks.X); assert.equal(await height(), Number(TEND));
   const ok = planAndBuild({ utxo: acc, path: 'A3', sponsors: [sponsorUtxo(st.sp)], ctx: { tipHeight: Number(TEND) } });
   const ra = await send(ok.hex); assert.ok(ra.ok, JSON.stringify(ra));
-  st.a3 = ra.result; await mine(1, locks.X);
+  st.a3 = ra.result; assert.deepEqual((await rpc('getrawtransaction', [st.a3, true])).vin.map((v) => v.sequence), [0xfffffffe, 0xfffffffe], 'A3 nSequence on the wire'); await mine(1, locks.X);
   st.req = await outOf(st.a3, hexOf(chain.locks.requested)); st.sp = await outOf(st.a3, hexOf(locks.S));
   note('A3 at tip=tEnd accepted + mined', true, { txid: st.a3 });
 });
@@ -95,11 +95,11 @@ test('C1 complete: BIP68 boundary on the node (431 confirmations rejected, 432 a
   const early = planAndBuild({ utxo: req, path: 'C1', sponsors: [sponsorUtxo(st.sp)], ctx: { dryRun: true } });
   const re = await send(early.hex);
   note('C1 at 431 confirmations', re.ok === false, { error: re.error });
-  assert.equal(re.ok, false, 'node must reject C1 at 431 confirmations');
+  assert.equal(re.ok, false, 'node must reject C1 at 431 confirmations'); assert.match(re.error, /non-BIP68-final/);
   await mine(1, locks.X); assert.equal(await confs(st.a3), 432);
   const ok = planAndBuild({ utxo: req, path: 'C1', sponsors: [sponsorUtxo(st.sp)], ctx: { confirmations: 432 } });
   const ra = await send(ok.hex); assert.ok(ra.ok, JSON.stringify(ra));
-  st.c1 = ra.result; await mine(1, locks.X);
+  st.c1 = ra.result; assert.deepEqual((await rpc('getrawtransaction', [st.c1, true])).vin.map((v) => v.sequence), [432, 0xfffffffe], 'C1 nSequence on the wire'); await mine(1, locks.X);
   const w = await outOf(st.c1, hexOf(locks.W)); assert.equal(w.satoshis, F);
   note('C1 at 432 confirmations accepted + mined; worker received F', true, { txid: st.c1 });
 });

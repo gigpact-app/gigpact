@@ -19,7 +19,6 @@ const chain = buildChain(params, { provider });
 const rec = []; const note = (name, ok, detail = {}) => rec.push({ name, ok, level: 'regtest', ...detail });
 const hexOf = (b) => binToHex(Uint8Array.from(b));
 const addr = (lb) => lockingBytecodeToCashAddress({ bytecode: lb, prefix: 'bchtest' }).address;
-const SCRIPT_FAIL = /mandatory-script-verify-flag-failed/;
 let nodeInfo; const st = {};
 
 before(async () => { nodeInfo = await startNode(); nodeInfo.subversion = (await rpc('getnetworkinfo')).subversion; });
@@ -79,19 +78,19 @@ test('F1 negatives: wrong signer, wrong lock, wrong amount', async () => {
   let u = await fund(); let sp = await spon();
   const good = () => mk({ utxo: u, path: 'F1', sponsors: [sp], ctx: {}, job: declareFunding(newJob(chain), u) });
   const g = good();
-  await expectReject('F1 signed by X instead of W', tamper(g, {}, { ...keys, W: keys.X }), SCRIPT_FAIL);
-  await expectReject('F1 output to V instead of Accepted lock', tamper(g, { outs: [{ ...g.plan.outs[0], lock: locks.V }] }), SCRIPT_FAIL);
-  await expectReject('F1 output F-1 instead of F', tamper(g, { outs: [{ ...g.plan.outs[0], amount: F - 1n }] }), SCRIPT_FAIL);
+  await expectReject('F1 signed by X instead of W', tamper(g, {}, { ...keys, W: keys.X }), /CHECK\(MULTI\)SIG/);
+  await expectReject('F1 output to V instead of Accepted lock', tamper(g, { outs: [{ ...g.plan.outs[0], lock: locks.V }] }), /OP_EQUALVERIFY/);
+  await expectReject('F1 output F-1 instead of F', tamper(g, { outs: [{ ...g.plan.outs[0], amount: F - 1n }] }), /OP_NUMEQUALVERIFY/);
   const r = await send(g.hex); assert.ok(r.ok, JSON.stringify(r)); note('F1 control (unmodified) accepted', true, { txid: r.result });
   await mine(1, locks.X);
-  await expectReject('F1 replay after confirmation', g.hex, /missing-inputs|already|txn-already-in-mempool|bad-txns-inputs-missingorspent/);
+  await expectReject('F1 replay after confirmation', g.hex, /already in block chain/);
   st.f1 = r.result;
 });
 
 test('F2 negative: cancel signed by W instead of V', async () => {
   const u = await fund(); const sp = await spon();
   const g = mk({ utxo: u, path: 'F2', sponsors: [sp], ctx: {} });
-  await expectReject('F2 signed by W instead of V', tamper(g, {}, { ...keys, V: keys.W }), SCRIPT_FAIL);
+  await expectReject('F2 signed by W instead of V', tamper(g, {}, { ...keys, V: keys.W }), /CHECK\(MULTI\)SIG/);
   const r = await send(g.hex); assert.ok(r.ok, JSON.stringify(r)); note('F2 control accepted', true, { txid: r.result });
   await mine(1, locks.X);
 });
@@ -131,7 +130,7 @@ test('dust / relay measurement on the node (plain outputs, no contract)', async 
     }
   }
   note('dust threshold by output type (node policy)', true, { out });
-  assert.equal(out.P2PKH['545'] === 'accepted', false); assert.equal(out.P2PKH['546'], 'accepted');
+  assert.match(out.P2PKH['545'], /dust/); assert.match(out.P2SH32['575'], /dust/); assert.match(out.P2SH32['545'], /dust/); assert.equal(out.P2PKH['546'], 'accepted');
   assert.equal(out.P2SH32['575'] === 'accepted', false); assert.equal(out.P2SH32['576'], 'accepted');
   // relay fee: ~0.5 sat/byte rejected, >=1 sat/byte accepted
   const mkFeeTx = (fee) => { const b = new TransactionBuilder({ provider }); b.addInput({ ...st.v, lockingBytecode: hexOf(locks.V) }, tpl(keys.V).unlockP2PKH()); b.addOutput({ to: addr(locks.V), amount: st.v.satoshis - fee }); return b.buildLibauthTransaction(true); };

@@ -29,10 +29,12 @@ export async function tryRpc(method, params = []) {
 let child;
 export async function startNode() {
   if (!existsSync(BITCOIND)) throw new Error(`bitcoind not found at ${BITCOIND} (see tools/ in the README)`);
+  if ((await tryRpc('getblockchaininfo')).ok) throw new Error(`something already answers on RPC port ${RPC_PORT}; refusing to attach to a foreign node`);
   rmSync(DATADIR, { recursive: true, force: true }); mkdirSync(DATADIR, { recursive: true });
   child = spawn(BITCOIND, ['-regtest', `-datadir=${DATADIR}`, '-rpcuser=gp', '-rpcpassword=gp', `-rpcport=${RPC_PORT}`, `-port=${P2P_PORT}`, '-listen=0', '-discover=0', '-dnsseed=0', '-printtoconsole=0'], { stdio: 'ignore' });
-  child.on('error', (e) => { throw e; });
-  for (let i = 0; i < 60; i++) { await new Promise((r) => setTimeout(r, 500)); const r = await tryRpc('getblockchaininfo'); if (r.ok) return r.result; }
+  child.on('error', (e) => { console.error('bitcoind spawn error', e); });
+  let died = false; child.on('exit', () => { died = true; });
+  for (let i = 0; i < 60 && !died; i++) { await new Promise((r) => setTimeout(r, 500)); const r = await tryRpc('getblockchaininfo'); if (r.ok) { if (r.result.chain !== 'regtest' || r.result.blocks !== 0) throw new Error('node is not a fresh regtest chain'); return r.result; } }
   throw new Error('regtest node did not start');
 }
 export async function stopNode() {
@@ -41,7 +43,9 @@ export async function stopNode() {
   await new Promise((res) => { const t = setTimeout(() => { child.kill('SIGKILL'); res(); }, 15000); child.on('exit', () => { clearTimeout(t); res(); }); });
   rmSync(DATADIR, { recursive: true, force: true }); child = undefined;
 }
-process.on('exit', () => { try { child?.kill('SIGKILL'); } catch {} });
+const bye = () => { try { child?.kill('SIGKILL'); } catch {} try { rmSync(DATADIR, { recursive: true, force: true }); } catch {} };
+process.on('exit', bye);
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { bye(); process.exit(1); });
 
 export const height = async () => rpc('getblockcount');
 export async function mine(n, toLockingBytecode) {
