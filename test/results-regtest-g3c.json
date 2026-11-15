@@ -1,0 +1,124 @@
+{
+ "level": "regtest",
+ "node": "/Bitcoin Cash Node:29.2.0/",
+ "cases": [
+  {
+   "name": "setup",
+   "ok": true,
+   "level": "regtest",
+   "subversion": "/Bitcoin Cash Node:29.2.0/"
+  },
+  {
+   "name": "C2 objectClaim accepted (Requested -> Dispute100)",
+   "ok": true,
+   "level": "regtest",
+   "txids": [
+    "d557b708ff888fc2592684728858fed3ebdfa55fd88be5e25c803678c659940c",
+    "5b526867adb14f5b816e16484f7d195b4a101f295b394dbfbdda0eaaf796d7f7",
+    "a81ed6ec6088d0185592bdf52f57a78adc1d188dc8ccadfa82a9ba0d496a9ad6"
+   ]
+  },
+  {
+   "name": "D1 signed by W instead of A",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation) (code 16)"
+  },
+  {
+   "name": "D1 arbitrator fee fA-1 (W gets +1)",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Script failed an OP_NUMEQUALVERIFY operation) (code 16)"
+  },
+  {
+   "name": "D1 accepted: W gets F-fA, A gets fA",
+   "ok": true,
+   "level": "regtest",
+   "txid": "b59206d188d668f200d0b057c16a308654ba946603fc52db0c0f69680cb8af2b"
+  },
+  {
+   "name": "D2 accepted: V gets F-fA, A gets fA",
+   "ok": true,
+   "level": "regtest",
+   "txid": "4e3de0fc59b77c6884b300f85b3115a1300ee093bddb3b205d0ce8b1b766e8a5"
+  },
+  {
+   "name": "D3 unequal split (W +1, V -1)",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Script failed an OP_NUMEQUALVERIFY operation) (code 16)"
+  },
+  {
+   "name": "D3 accepted: 49000 / 49000 / fA",
+   "ok": true,
+   "level": "regtest",
+   "txid": "89d013e7a476efa6b68e47077a3908781636de2b2163ca35dcbce01df9fe8f3c"
+  },
+  {
+   "name": "D5 signed by W instead of V",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation) (code 16)"
+  },
+  {
+   "name": "D5 accepted: W gets F",
+   "ok": true,
+   "level": "regtest",
+   "txid": "efa9dbdd072fdebefd68e4fb92e06881b9ff924a538ab40d92e99dff970b78b5"
+  },
+  {
+   "name": "D6 signed by V instead of W",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation) (code 16)"
+  },
+  {
+   "name": "D6 accepted: V gets F",
+   "ok": true,
+   "level": "regtest",
+   "txid": "585add090e2ad02b30c6e685fc4a615cbba2029d9cc7aadfb5805edc636cefff"
+  },
+  {
+   "name": "A4 at tip=tA4-1",
+   "ok": true,
+   "level": "regtest",
+   "error": "bad-txns-nonfinal, non-final transaction (code 64)"
+  },
+  {
+   "name": "A4 signed by W instead of V",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation) (code 16)"
+  },
+  {
+   "name": "A4 at tip=tA4 accepted",
+   "ok": true,
+   "level": "regtest",
+   "txid": "b4c60314c1642afcf220912519ab93b099205802bce6de552071c4425e02b657"
+  },
+  {
+   "name": "D4(50) at 2015 confirmations",
+   "ok": true,
+   "level": "regtest",
+   "error": "non-BIP68-final (code 64)"
+  },
+  {
+   "name": "D4(50) at 2016 confirmations accepted: W and V get F/2",
+   "ok": true,
+   "level": "regtest",
+   "txid": "2f19e6e23ab9d32b2722d24014ae4f66735cf0958a5bf4e500f2d319c0e7824f"
+  },
+  {
+   "name": "D4(100) at 2015 confirmations",
+   "ok": true,
+   "level": "regtest",
+   "error": "non-BIP68-final (code 64)"
+  },
+  {
+   "name": "D4(100) at 2016 confirmations accepted: W gets F",
+   "ok": true,
+   "level": "regtest",
+   "txid": "bbba3497444bbf2ba0e3d82b6ab1402267248a7339deec8fb13898164675d402"
+  }
+ ]
+}

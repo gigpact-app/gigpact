@@ -31,3 +31,9 @@ Known residual limits, accepted for now:
 - G3-b (`test/regtest/g3b.test.mjs`, results-regtest-g3b.json): wrong signer, wrong output lock, wrong amount (F1), wrong signer (F2), final nSequence on A3 input, nSequence 431 on C1 input are all rejected by the node with the asserted reason; unmodified controls accepted; replay after confirmation rejected.
 - Node dust policy measured: P2PKH output accepted from 546, P2SH32 from 576 (545 / 575 rejected as dust); matches `changeFloor`. DUST_SAFE=1000 sits above both. Relay fee: ~0.5 sat/B rejected (`min relay fee not met`), >1 sat/B accepted.
 - Not yet measured: D-paths and A4/dispute flows on the node, token-carrying inputs, multi-sponsor txs, wallet signing, mainnet. Review of G3 by a clean-context agent is pending (planned after G3 completes).
+
+### G3-c (regtest, BCHN 29.2.0): dispute paths — `test/regtest/g3c.test.mjs`, results-regtest-g3c.json
+- C2 (Requested -> Dispute100) and A4 (Accepted -> Dispute50) accepted; A4 at tip=tA4-1 rejected (`bad-txns-nonfinal`), at tA4 accepted (tA4 = tEnd+G = 1308).
+- D1 (W gets F-fA, A gets fA), D2 (V gets F-fA, A gets fA), D3 (49000/49000/fA), D5 (W gets F), D6 (V gets F): accepted with the exact payouts read back from the node. D4 on Dispute100: all to W; on Dispute50: F/2 each to W and V. D4 at 2015 confirmations rejected (`non-BIP68-final`), at 2016 accepted (both instances).
+- Negatives rejected with asserted node reason: D1 signed by W; D1 arbitrator fee fA-1; D3 unequal split; D5 signed by W; D6 signed by V; A4 signed by W.
+- Still not measured: token-carrying inputs, multi-sponsor txs, odd-net D3 rounding on the node, wallet signing, mainnet. Clean-context review of all of G3 pending.
