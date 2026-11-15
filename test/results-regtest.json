@@ -1,0 +1,53 @@
+{
+ "level": "regtest",
+ "node": "/Bitcoin Cash Node:29.2.0/",
+ "cases": [
+  {
+   "name": "node start + 102 blocks",
+   "ok": true,
+   "level": "regtest",
+   "subversion": "/Bitcoin Cash Node:29.2.0/"
+  },
+  {
+   "name": "funding tx accepted + confirmed",
+   "ok": true,
+   "level": "regtest",
+   "txid": "9862bbeb1d491e233ca3e2c11bf4a31446b7e0ace27c2265026a2e6048dbfbee"
+  },
+  {
+   "name": "F1 accepted + mined",
+   "ok": true,
+   "level": "regtest",
+   "txid": "025970c678089aa0e8c48404885c5ddb383b26d5a54b8cafc18b78105cc8402a",
+   "sequences": [
+    4294967294,
+    4294967294
+   ],
+   "size": 672
+  },
+  {
+   "name": "A3 at tip=tEnd-1",
+   "ok": true,
+   "level": "regtest",
+   "error": "bad-txns-nonfinal, non-final transaction (code 64)"
+  },
+  {
+   "name": "A3 at tip=tEnd accepted + mined",
+   "ok": true,
+   "level": "regtest",
+   "txid": "ae218e11fdd33fb278597dcaa477a4a66b5ebfd428a3e64b5c4dfc5a8e3b86fc"
+  },
+  {
+   "name": "C1 at 431 confirmations",
+   "ok": true,
+   "level": "regtest",
+   "error": "non-BIP68-final (code 64)"
+  },
+  {
+   "name": "C1 at 432 confirmations accepted + mined; worker received F",
+   "ok": true,
+   "level": "regtest",
+   "txid": "68eeb1d34ce8e52b44fb962863bf490b0a900f2da2c365272328bcb80a77f274"
+  }
+ ]
+}
