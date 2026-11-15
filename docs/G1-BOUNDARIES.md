@@ -14,3 +14,14 @@ Evidence level of G1: source compiled with cashc 0.14.0 on two machines (hashes 
 - G1-03 (I12): enforced in `src/chain.mjs` (`buildChain`, `verifyChain`, `assertChain`) and exercised in `test/lib.test.mjs`. Not regtest, wallet or mainnet evidence.
 - G1-04 (K17): enforced in `src/k17.mjs` and `planSpend` (declared outpoint, exact value F, job bound to the exact chain). Job persistence/UI storage does not exist yet.
 - Not proven here: BIP68 UTXO aging, locktime finality against tip/MTP, mempool dust/relay (DUST_SAFE still unmeasured, G1-05), conflicting spends, wallet signing. These remain G3+.
+
+### G2 part 2: review history and known residual limits (library layer, R-VM dry-run level)
+
+Review: three independent clean-context Claude reviews (no ChatGPT review for this part; ChatGPT was unavailable). Round 1 REJECT, round 2 CONDITIONAL PASS, round 3 CONDITIONAL PASS; every BLOCKER, MAJOR and the cheap MINOR items were fixed and mutation-tested. These are not a substitute for regtest (G3) or an external audit.
+
+Known residual limits, accepted for now:
+- `buildTx`/`inspectTx` trust a plan object; they do not authenticate that it came from `planSpend` (a hand-built plan is the caller's responsibility).
+- Typed arrays inside a plan (locks) cannot be frozen; each is a private copy, and the plain-data fields are frozen.
+- A `job` record is not snapshotted against hostile getters (the plan contains no job values).
+- `inspectTx` does not enforce the fee-rate cap; `buildTx` does. The cap is `size*2 + 2 sat` (a 2-sat allowance), so the real rate at 2 sat/byte is about 2.002.
+- Change floor is `max(546, 3*(157+len))` sat per the SDK rule (P2PKH 546, P2SH32 576); real relay policy is measured at G7. DUST_SAFE (1000) is still unmeasured.
