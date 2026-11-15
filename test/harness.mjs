@@ -47,7 +47,7 @@ export function lineIn(cname, fn, re, opts = {}) {
 }
 
 export const results = [];
-process.on('exit', () => { try { writeFileSync(new URL('test/results.json', root), JSON.stringify(results, null, 1)); } catch {} });
+process.on("exit", () => { if (!results.length) return; try { writeFileSync(new URL('test/results.json', root), JSON.stringify(results, null, 1)); } catch {} });
 
 // spec: {contract, cname, fn, args, value, outs, sponsors, seq, locktime, order, contractIdx, sponsorTokenIdx}
 export function run(spec) {

@@ -3,7 +3,7 @@
 // (txid:vout and value) when the employer funds it; F1 (accept) is only built for exactly that outpoint.
 // Any other UTXO at the Funded address is "foreign": it never counts as job funding. F2 (cancel) can still
 // return it to the employer (G1-01: no value floor), subject to network relay policy and a sponsor input.
-import { SpendError } from './errors.mjs';
+import { SpendError, checkOutpoint } from './errors.mjs';
 import { assertChain, canonParams, cloneParams } from './chain.mjs';
 
 // A job record is bound to ONE chain: its parameters and every contract address (I12).
@@ -11,17 +11,19 @@ export const newJob = (chain) => ({ params: cloneParams(chain.params), addresses
 
 export const outpointKey = (u) => `${u.txid}:${u.vout}`;
 
+const lc = (t) => String(t).toLowerCase();
 export function declareFunding(job, outpoint) {
+  checkOutpoint(outpoint, 'declared funding outpoint');
   if (job.declaredFunding) throw new SpendError('K17AlreadyDeclared', 'a job has exactly one declared funding outpoint');
   if (outpoint.satoshis !== job.params.F) throw new SpendError('K17Value', `declared funding must equal F (${job.params.F}), got ${outpoint.satoshis}`);
-  return { ...job, declaredFunding: { txid: outpoint.txid, vout: outpoint.vout, satoshis: outpoint.satoshis } };
+  return { ...job, declaredFunding: { txid: lc(outpoint.txid), vout: outpoint.vout, satoshis: outpoint.satoshis } };
 }
 
 // utxos: everything currently at the Funded address.
 export function classifyFunded(job, utxos) {
   const d = job.declaredFunding;
-  const declared = d ? utxos.find((u) => u.txid === d.txid && u.vout === d.vout) : undefined;
-  const foreign = utxos.filter((u) => !d || !(u.txid === d.txid && u.vout === d.vout));
+  const declared = d ? utxos.find((u) => lc(u.txid) === d.txid && u.vout === d.vout) : undefined;
+  const foreign = utxos.filter((u) => !d || !(lc(u.txid) === d.txid && u.vout === d.vout));
   return { declared, foreign, declaredMissing: !!d && !declared, undeclared: !d };
 }
 
@@ -42,7 +44,7 @@ export function assertF1Funding(job, utxo, chain) {
   assertJobChain(job, chain);
   const d = job.declaredFunding;
   if (!d) throw new SpendError('K17NotDeclared', 'job has no declared funding outpoint');
-  if (utxo.txid !== d.txid || utxo.vout !== d.vout) throw new SpendError('K17Mismatch', `F1 must spend the declared outpoint ${d.txid}:${d.vout}, not ${utxo.txid}:${utxo.vout}`);
+  if (lc(utxo.txid) !== d.txid || utxo.vout !== d.vout) throw new SpendError('K17Mismatch', `F1 must spend the declared outpoint ${d.txid}:${d.vout}, not ${utxo.txid}:${utxo.vout}`);
   if (utxo.satoshis !== job.params.F || d.satoshis !== job.params.F) throw new SpendError('K17Value', 'funding value must equal F');
   return true;
 }

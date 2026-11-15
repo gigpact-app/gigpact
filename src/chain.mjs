@@ -4,7 +4,7 @@
 // is where I12 is enforced and verified.
 import { readFileSync } from 'node:fs';
 import { Contract, SignatureTemplate } from 'cashscript';
-import { cashAddressToLockingBytecode, binToHex, hexToBin } from '@bitauth/libauth';
+import { cashAddressToLockingBytecode, binToHex, hexToBin, secp256k1 } from '@bitauth/libauth';
 
 export const BIP68_MAX_BLOCKS = 0xffffn; // largest block-based relative lock (low 16 bits of nSequence)
 export const DEFAULTS = Object.freeze({ dv: 432n, l: 2016n, G: 1008n, dust: 1000n }); // blocks; G = 7 days
@@ -24,8 +24,9 @@ export function normalize(p) {
   for (const k of ['dv', 'l', 'G', 'dust']) if (p[k] !== undefined) n[k] = p[k];
   n.pk = {}; n.lock = {};
   for (const r of ['V', 'W', 'A']) {
-    n.pk[r] = bytes(p.pk?.[r] ?? ''); n.lock[r] = bytes(p.lock?.[r] ?? '');
+    n.pk[r] = Uint8Array.from(bytes(p.pk?.[r] ?? '')); n.lock[r] = Uint8Array.from(bytes(p.lock?.[r] ?? '')); // copies: never alias caller memory
     need(n.pk[r].length === 33 && (n.pk[r][0] === 2 || n.pk[r][0] === 3), `pk${r} must be a 33-byte compressed public key`);
+    need(secp256k1.validatePublicKey(n.pk[r]), `pk${r} is not a valid secp256k1 point`);
     need(n.lock[r].length > 0 && n.lock[r].length <= 100, `lock${r} must be a locking bytecode (1..100 bytes)`);
   }
   for (const k of ['F', 'fA', 'tEnd', 'dv', 'l', 'G', 'dust']) need(typeof n[k] === 'bigint' && n[k] > 0n, `${k} must be a positive bigint`);

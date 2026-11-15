@@ -4,14 +4,14 @@
 import { TransactionBuilder, SighashType, randomUtxo } from 'cashscript';
 import { binToHex, hexToBin, decodeTransactionBch, encodeTransactionBch } from '@bitauth/libauth';
 import { assertChain } from './chain.mjs';
-import { SpendError } from './errors.mjs';
+import { SpendError, checkOutpoint } from './errors.mjs';
 import { assertF1Funding } from './k17.mjs';
 
 export const SEQ_NONFINAL = 0xfffffffe;      // sponsor inputs and non-CSV contract inputs (G6: no relative lock, CLTV needs non-final)
 export const SIGHASH_61 = SighashType.SIGHASH_ALL | SighashType.SIGHASH_UTXOS; // on wire 0x61
 export const MIN_OUTPUT = 546n;               // SDK/network floor for the sponsor change output (G7 measures real policy)
 export const MAX_FEE_RATE = 2;                // sat/byte, doc 1.3 suggestion (library policy, not a contract rule)
-const FEE_SLACK = 2n;                         // sat of rounding / DER-length jitter allowed on top of size*MAX_FEE_RATE
+const FEE_SLACK = 2n;                         // sat of rounding allowed on top of size*MAX_FEE_RATE (signatures are fixed-width Schnorr, so there is no size jitter)
 export const BIP68_DISABLE = 0x80000000, BIP68_TYPE = 0x400000, BIP68_VALUE_MASK = 0xffff;
 
 // nSequence for a block-based BIP68 relative lock of n blocks: only the low 16 bits, disable flag and time-type flag clear.
@@ -22,9 +22,6 @@ export function csvSequence(n) {
   return seq;
 }
 
-function checkOutpoint(u, what) {
-  need(u && typeof u.txid === 'string' && /^[0-9a-fA-F]{64}$/.test(u.txid) && Number.isInteger(u.vout) && u.vout >= 0 && u.vout <= 0xffffffff, 'BadOutpoint', `${what}: txid must be 64 hex chars and vout a non-negative integer`);
-}
 const bytesOf = (b) => (typeof b === 'string' ? hexToBin(b) : b);
 const sameBytes = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 export { SpendError };
@@ -52,9 +49,23 @@ export const PATHS = {
 export const PATH_IDS = Object.keys(PATHS);
 
 // ctx: { phi?:100|50 (dispute instance), tipHeight?, confirmations?, dryRun? }
+// One-time copy of a caller-supplied UTXO: every property is read exactly once and the lock is copied to bytes, so
+// nothing validated below can change between validation and use (getters, shared arrays, hex vs bytes).
+function snap(u) {
+  if (!u || typeof u !== 'object') return u;
+  const c = { ...u };
+  if (c.lockingBytecode !== undefined && c.lockingBytecode !== null) c.lockingBytecode = Uint8Array.from(bytesOf(c.lockingBytecode));
+  return c;
+}
+const isCount = (v) => (typeof v === 'number' && Number.isInteger(v) && v >= 0) || (typeof v === 'bigint' && v >= 0n);
+const freezeAll = (o) => { for (const v of Object.values(o)) if (v && typeof v === 'object' && !ArrayBuffer.isView(v)) freezeAll(v); return Object.freeze(o); };
+
 // utxo: { txid, vout, satoshis }   sponsors: [{ txid, vout, satoshis, lockingBytecode, token? }]
-export function planSpend({ chain: claimed, path, utxo, sponsors, feeRate = 1, ctx = {}, job }) {
+export function planSpend({ chain: claimed, path, utxo: utxoIn, sponsors: sponsorsIn, feeRate = 1, ctx: ctxIn, job }) {
   const P = PATHS[path]; need(P, 'UnknownPath', String(path));
+  const utxo = snap(utxoIn), ctx = { ...(ctxIn ?? {}) };
+  const sponsors = Array.isArray(sponsorsIn) ? sponsorsIn.map(snap) : sponsorsIn;
+  for (const k of ['tipHeight', 'confirmations']) need(ctx[k] === undefined || isCount(ctx[k]), 'BadContext', `${k} must be a non-negative integer`);
   // Everything below (parameters, locks, contracts, tA4) comes from a FRESH verified rebuild of the claimed chain (I12).
   const chain = assertChain(claimed);
   const p = chain.params, L = chain.locks;
@@ -99,7 +110,11 @@ export function planSpend({ chain: claimed, path, utxo, sponsors, feeRate = 1, c
     const N = p[P.csv]; seq0 = csvSequence(N);
     if (!ctx.dryRun) { need(ctx.confirmations !== undefined, 'MissingContext', 'confirmations required'); need(BigInt(ctx.confirmations) >= N, 'TooEarly', `${path} needs the UTXO to have >= ${N} confirmations`); }
   }
-  return { path, contractLocks, contractKey: ck, contract, fn: P.fn, signer: P.signer, input0: { ...utxo, lockingBytecode: bytesOf(utxo.lockingBytecode), sequence: seq0 }, sponsors: sponsors.map((s) => ({ ...s, sequence: SEQ_NONFINAL })), outs, locktime, feeRate, phi };
+  const planOuts = outs.map((o) => ({ lock: Uint8Array.from(o.lock), amount: o.amount }));
+  const plan = { path, contractLocks: contractLocks.map((l) => Uint8Array.from(l)), contractKey: ck, contract, fn: P.fn, signer: P.signer, input0: { ...utxo, sequence: seq0 }, sponsors: sponsors.map((s) => ({ ...s, sequence: SEQ_NONFINAL })), outs: planOuts, locktime, feeRate, phi: P.c.includes('|') ? phi : 100 };
+  // the contract object is a live SDK object and is not frozen; the plain-data parts are, so a plan cannot drift after validation
+  Object.freeze(plan.input0); plan.sponsors.forEach(Object.freeze); Object.freeze(plan.sponsors); planOuts.forEach(Object.freeze); Object.freeze(planOuts); Object.freeze(plan.contractLocks);
+  return Object.freeze(plan);
 }
 
 // Turn a plan into a CashScript builder. keys: { V, W, A } role keys and S sponsor key (local signer / dry-run only).
@@ -119,7 +134,7 @@ export function toBuilder(plan, { provider, keys, SignatureTemplate, changeLock,
 
 // Account for the transaction as actually serialized and compare it with the plan: version, input order and
 // outpoints, sequences, locktime, every contract output (lock and amount), the change output, real fee and change.
-// Throws if anything the plan promised is not in the bytes. changeLock (optional) is checked on the change output.
+// Throws if anything the plan promised is not in the bytes. changeLock is mandatory whenever a change output exists.
 export function inspectTx(plan, hex, changeLock) {
   const tx = decodeTransactionBch(hexToBin(hex));
   need(typeof tx !== 'string', 'BadTx', String(tx));
@@ -147,7 +162,8 @@ export function inspectTx(plan, hex, changeLock) {
   if (hasChange) {
     need(change >= MIN_OUTPUT, 'BadTx', 'change output below the output floor');
     need(!tx.outputs[n].token, 'PlanMismatch', 'change output carries a token');
-    if (changeLock) need(sameBytes(tx.outputs[n].lockingBytecode, bytesOf(changeLock)), 'PlanMismatch', 'change output lock differs from changeLock');
+    need(changeLock, 'NoChangeLock', 'changeLock is required to inspect a transaction that has a change output');
+    need(sameBytes(tx.outputs[n].lockingBytecode, bytesOf(changeLock)), 'PlanMismatch', 'change output lock differs from changeLock');
   }
   const fee = totalIn - outSum;
   need(fee === S - change && fee >= 0n, 'Accounting', 'fee must equal the sponsor total minus change');
@@ -158,12 +174,17 @@ export function inspectTx(plan, hex, changeLock) {
 // signatures and 8-byte amounts are fixed width), so no iteration is needed: the with-change shape is used whenever the
 // fitted fee leaves at least MIN_OUTPUT of change; otherwise the change output is dropped and the WHOLE sponsor
 // remainder becomes the fee, which must still pass the fee-rate cap. Returned fee/change are read back from the bytes.
-export function buildTx(plan, opts) {
-  need(opts.changeLock, 'NoChangeLock', 'sponsor change lock required');
-  need(!plan.contractLocks.some((l) => sameBytes(l, bytesOf(opts.changeLock))), 'ChangeToContract', 'change must not be sent to a GigPact contract lock');
+export function buildTx(plan, optsIn) {
+  need(optsIn.changeLock, 'NoChangeLock', 'sponsor change lock required');
+  const changeLock = Uint8Array.from(bytesOf(optsIn.changeLock)); // hex or bytes in, bytes used everywhere below
+  need(changeLock.length >= 1 && changeLock.length <= 100 && changeLock[0] !== 0x6a, 'BadChangeLock', 'change lock must be 1..100 bytes and not an OP_RETURN (unspendable) output');
+  const opts = { ...optsIn, changeLock };
+  need(!plan.contractLocks.some((l) => sameBytes(l, changeLock)), 'ChangeToContract', 'change must not be sent to a GigPact contract lock');
   need(typeof plan.feeRate === 'number' && plan.feeRate >= 1 && plan.feeRate <= MAX_FEE_RATE, 'FeeRate', `fee rate must be in [1, ${MAX_FEE_RATE}] sat/byte`);
   const S = plan.sponsors.reduce((a, s) => a + s.satoshis, 0n);
-  const MARGIN = 2n; // rounding allowance on top of size * feeRate
+  // The 2-sat MARGIN is part of the fee target, so a remainder within MARGIN of MIN_OUTPUT is treated as 'no change'
+  // (the change output is dropped, not shrunk). This shifts the 546 boundary by 2 sat and is pinned in the tests.
+  const MARGIN = 2n;
   const sizeOf = (fee) => encodeTransactionBch(toBuilder(plan, { ...opts, fee }).buildLibauthTransaction(true)).length;
   const need_ = (size) => BigInt(Math.ceil(size * plan.feeRate)) + MARGIN;
   let fee;
@@ -180,7 +201,7 @@ export function buildTx(plan, opts) {
     if (/FeePerByteTooLow/i.test(String(e?.name)) || /lower than the standard minimum fee/.test(String(e?.message))) throw new SpendError('InsufficientSponsor', `sponsor inputs (${S} sat) cannot pay the minimum fee`);
     throw e;
   }
-  const a = inspectTx(plan, hex, opts.changeLock);
+  const a = inspectTx(plan, hex, changeLock);
   need(a.fee >= BigInt(a.size), 'FeeTooLow', `actual fee ${a.fee} sat is below the 1 sat/byte relay minimum for ${a.size} bytes`);
   need(a.fee <= BigInt(a.size) * BigInt(MAX_FEE_RATE) + FEE_SLACK, 'FeeTooHigh', `actual fee ${a.fee} sat on ${a.size} bytes exceeds ${MAX_FEE_RATE} sat/byte${a.hasChange ? '' : ' (change below ' + MIN_OUTPUT + ' sat was dropped into the fee)'}`);
   return { builder: b, hex, fee: a.fee, size: a.size, change: a.change, hasChange: a.hasChange, version: a.version };
