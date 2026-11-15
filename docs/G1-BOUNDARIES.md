@@ -25,3 +25,9 @@ Known residual limits, accepted for now:
 - A `job` record is not snapshotted against hostile getters (the plan contains no job values).
 - `inspectTx` does not enforce the fee-rate cap; `buildTx` does. The cap is `size*2 + 2 sat` (a 2-sat allowance), so the real rate at 2 sat/byte is about 2.002.
 - Change floor is `max(546, 3*(157+len))` sat per the SDK rule (P2PKH 546, P2SH32 576); real relay policy is measured at G7. DUST_SAFE (1000) is still unmeasured.
+
+## G3 regtest status (evidence level: regtest, BCHN 29.2.0, local; no wallet, no mainnet)
+- G3-a (`test/regtest/g3a.test.mjs`, results-regtest.json): funding -> F1 -> A3 -> C1 accepted by the node and mined. A3 at tip=tEnd-1 rejected (`bad-txns-nonfinal`), at tEnd accepted. C1 at 431 confirmations rejected (`non-BIP68-final`), at 432 accepted. Sponsor nSequence 0xfffffffe seen on the wire.
+- G3-b (`test/regtest/g3b.test.mjs`, results-regtest-g3b.json): wrong signer, wrong output lock, wrong amount (F1), wrong signer (F2), final nSequence on A3 input, nSequence 431 on C1 input are all rejected by the node with the asserted reason; unmodified controls accepted; replay after confirmation rejected.
+- Node dust policy measured: P2PKH output accepted from 546, P2SH32 from 576 (545 / 575 rejected as dust); matches `changeFloor`. DUST_SAFE=1000 sits above both. Relay fee: ~0.5 sat/B rejected (`min relay fee not met`), >1 sat/B accepted.
+- Not yet measured: D-paths and A4/dispute flows on the node, token-carrying inputs, multi-sponsor txs, wallet signing, mainnet. Review of G3 by a clean-context agent is pending (planned after G3 completes).

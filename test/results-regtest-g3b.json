@@ -1,0 +1,110 @@
+{
+ "level": "regtest",
+ "node": "/Bitcoin Cash Node:29.2.0/",
+ "cases": [
+  {
+   "name": "setup",
+   "ok": true,
+   "level": "regtest",
+   "subversion": "/Bitcoin Cash Node:29.2.0/"
+  },
+  {
+   "name": "F1 signed by X instead of W",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation) (code 16)"
+  },
+  {
+   "name": "F1 output to V instead of Accepted lock",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Script failed an OP_EQUALVERIFY operation) (code 16)"
+  },
+  {
+   "name": "F1 output F-1 instead of F",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Script failed an OP_NUMEQUALVERIFY operation) (code 16)"
+  },
+  {
+   "name": "F1 control (unmodified) accepted",
+   "ok": true,
+   "level": "regtest",
+   "txid": "d557b708ff888fc2592684728858fed3ebdfa55fd88be5e25c803678c659940c"
+  },
+  {
+   "name": "F1 replay after confirmation",
+   "ok": true,
+   "level": "regtest",
+   "error": "transaction already in block chain"
+  },
+  {
+   "name": "F2 signed by W instead of V",
+   "ok": true,
+   "level": "regtest",
+   "error": "mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation) (code 16)"
+  },
+  {
+   "name": "F2 control accepted",
+   "ok": true,
+   "level": "regtest",
+   "txid": "6776be124b9c4ec55f8e9b76cd12c716fca2aae163844a5ff1d4ea67a6879c95"
+  },
+  {
+   "name": "A3 contract input nSequence 0xffffffff (CLTV needs non-final)",
+   "ok": true,
+   "level": "regtest",
+   "error": "non-mandatory-script-verify-flag (Locktime requirement not satisfied) (code 64)"
+  },
+  {
+   "name": "A3 control accepted",
+   "ok": true,
+   "level": "regtest",
+   "txid": "18da0632b6ce2aefb8477bd80d48ab6cb11be8a2909775e3dfa719c411e647b7"
+  },
+  {
+   "name": "C1 nSequence 431 < dv at 432 confirmations",
+   "ok": true,
+   "level": "regtest",
+   "error": "non-mandatory-script-verify-flag (Locktime requirement not satisfied) (code 64)"
+  },
+  {
+   "name": "C1 control accepted",
+   "ok": true,
+   "level": "regtest",
+   "txid": "ed7326050cff68942dfd58a910486254bba461430a08e72737a76201655faa27"
+  },
+  {
+   "name": "dust threshold by output type (node policy)",
+   "ok": true,
+   "level": "regtest",
+   "out": {
+    "P2PKH": {
+     "545": "dust (code 64)",
+     "546": "accepted",
+     "575": "accepted",
+     "576": "accepted",
+     "1000": "accepted"
+    },
+    "P2SH32": {
+     "545": "dust (code 64)",
+     "546": "dust (code 64)",
+     "575": "dust (code 64)",
+     "576": "accepted",
+     "1000": "accepted"
+    }
+   }
+  },
+  {
+   "name": "fee ~0.5 sat/B",
+   "ok": true,
+   "level": "regtest",
+   "error": "min relay fee not met (code 66)"
+  },
+  {
+   "name": "fee >1 sat/B accepted",
+   "ok": true,
+   "level": "regtest"
+  }
+ ]
+}

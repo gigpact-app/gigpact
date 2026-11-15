@@ -7,7 +7,7 @@
   "scripts": {
     "build:contracts": "node scripts/build-contracts.mjs",
     "test": "node --test test/*.test.mjs && node test/summary.mjs",
-    "test:regtest": "node --test test/regtest/*.test.mjs"
+    "test:regtest": "node --test --test-concurrency=1 test/regtest/*.test.mjs"
   },
   "devDependencies": {
     "cashc": "0.14.0",
