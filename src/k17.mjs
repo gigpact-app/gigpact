@@ -4,10 +4,10 @@
 // Any other UTXO at the Funded address is "foreign": it never counts as job funding. F2 (cancel) can still
 // return it to the employer (G1-01: no value floor), subject to network relay policy and a sponsor input.
 import { SpendError } from './errors.mjs';
-import { assertChain, canonParams } from './chain.mjs';
+import { assertChain, canonParams, cloneParams } from './chain.mjs';
 
 // A job record is bound to ONE chain: its parameters and every contract address (I12).
-export const newJob = (chain) => ({ params: chain.params, addresses: { ...chain.addresses } });
+export const newJob = (chain) => ({ params: cloneParams(chain.params), addresses: { ...chain.addresses } });
 
 export const outpointKey = (u) => `${u.txid}:${u.vout}`;
 
@@ -29,7 +29,7 @@ export function classifyFunded(job, utxos) {
 // and that chain must itself be consistent with its parameters.
 export function assertJobChain(job, chain) {
   if (!job?.params || !job?.addresses) throw new SpendError('K17ChainMismatch', 'job has no recorded parameters/addresses');
-  assertChain(chain);
+  chain = assertChain(chain); // fresh, verified rebuild; the claimed object is never trusted
   const keys = Object.keys(chain.addresses);
   const bad = keys.filter((k) => job.addresses[k] !== chain.addresses[k]);
   if (bad.length || Object.keys(job.addresses).length !== keys.length) throw new SpendError('K17ChainMismatch', `job was created for another chain (addresses differ: ${bad.join(',') || 'extra keys'})`);

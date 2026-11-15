@@ -19,7 +19,9 @@ const need = (c, m) => { if (!c) throw new ParamError(m); };
 
 // params: { pk:{V,W,A}, lock:{V,W,A}, F, fA, tEnd, dv?, l?, G?, dust? }  (pubkeys/locks: Uint8Array or hex)
 export function normalize(p) {
-  const n = { dv: DEFAULTS.dv, l: DEFAULTS.l, G: DEFAULTS.G, dust: DEFAULTS.dust, ...p };
+  // only the known fields are kept: an unknown field in a parameter set is never carried along (and is caught by assertChain)
+  const n = { dv: DEFAULTS.dv, l: DEFAULTS.l, G: DEFAULTS.G, dust: DEFAULTS.dust, F: p.F, fA: p.fA, tEnd: p.tEnd };
+  for (const k of ['dv', 'l', 'G', 'dust']) if (p[k] !== undefined) n[k] = p[k];
   n.pk = {}; n.lock = {};
   for (const r of ['V', 'W', 'A']) {
     n.pk[r] = bytes(p.pk?.[r] ?? ''); n.lock[r] = bytes(p.lock?.[r] ?? '');
@@ -67,19 +69,34 @@ export function verifyChain(params, claimedAddresses, { provider }) {
   return { ok: mismatches.length === 0, mismatches, expected };
 }
 
-// A chain object must be self-consistent: its addresses are exactly what its parameters produce (I12).
-// Memoised per chain object, because it rebuilds five contracts.
-const checked = new WeakSet();
+// A chain object must be self-consistent AND everything the planner uses must come from a fresh rebuild:
+// parameters (including the derived tA4), the five contract addresses, every lock (V/W/A and the five contract
+// locks) and the contract objects themselves. Nothing is memoised: a chain object is mutable, so a one-time check
+// would not protect later spends. Returns the freshly rebuilt chain; callers must use THAT object, not the claimed one.
 export function assertChain(chain) {
-  if (checked.has(chain)) return true;
-  const v = verifyChain(chain.params, chain.addresses, { provider: chain.contracts.funded.provider });
-  if (!v.ok) throw new ParamError(`chain inconsistent with its parameters (I12): ${v.mismatches.join(',')}`);
-  checked.add(chain); return true;
+  if (!chain?.params || !chain.addresses || !chain.locks || !chain.contracts?.funded?.provider) throw new ParamError('chain object is incomplete');
+  const fresh = buildChain(chain.params, { provider: chain.contracts.funded.provider });
+  if (canonParams(chain.params) !== canonParams(fresh.params)) throw new ParamError('chain parameters differ from the normalized parameters (I12)');
+  const bad = [];
+  for (const k of Object.keys(fresh.addresses)) {
+    if (chain.addresses[k] !== fresh.addresses[k]) bad.push(`address.${k}`);
+    if (chain.contracts[k]?.address !== fresh.addresses[k]) bad.push(`contract.${k}`);
+  }
+  for (const k of Object.keys(fresh.locks)) if (!chain.locks[k] || canonParams(bytes(chain.locks[k])) !== canonParams(fresh.locks[k])) bad.push(`lock.${k}`);
+  if (Object.keys(chain.locks).length !== Object.keys(fresh.locks).length || Object.keys(chain.addresses).length !== Object.keys(fresh.addresses).length) bad.push('extra keys');
+  if (bad.length) throw new ParamError(`chain inconsistent with its parameters (I12): ${bad.join(',')}`);
+  return fresh;
 }
 
 // Canonical text of a parameter set (bigint / bytes safe), for exact comparison of two jobs or chains.
 export function canonParams(p) {
   const f = (v) => (typeof v === 'bigint' ? `${v}n` : v instanceof Uint8Array ? binToHex(v) : v && typeof v === 'object' ? `{${Object.keys(v).sort().map((k) => `${k}:${f(v[k])}`).join(',')}}` : String(v));
+  return f(p);
+}
+
+// Deep copy of normalized parameters (bytes and bigint safe) so a stored job cannot be changed through a shared object.
+export function cloneParams(p) {
+  const f = (v) => (v instanceof Uint8Array ? Uint8Array.from(v) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, f(x)])) : v);
   return f(p);
 }
 

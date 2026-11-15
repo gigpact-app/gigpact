@@ -22,6 +22,9 @@ export function csvSequence(n) {
   return seq;
 }
 
+function checkOutpoint(u, what) {
+  need(u && typeof u.txid === 'string' && /^[0-9a-fA-F]{64}$/.test(u.txid) && Number.isInteger(u.vout) && u.vout >= 0 && u.vout <= 0xffffffff, 'BadOutpoint', `${what}: txid must be 64 hex chars and vout a non-negative integer`);
+}
 const bytesOf = (b) => (typeof b === 'string' ? hexToBin(b) : b);
 const sameBytes = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 export { SpendError };
@@ -50,22 +53,35 @@ export const PATH_IDS = Object.keys(PATHS);
 
 // ctx: { phi?:100|50 (dispute instance), tipHeight?, confirmations?, dryRun? }
 // utxo: { txid, vout, satoshis }   sponsors: [{ txid, vout, satoshis, lockingBytecode, token? }]
-export function planSpend({ chain, path, utxo, sponsors, feeRate = 1, ctx = {}, job }) {
+export function planSpend({ chain: claimed, path, utxo, sponsors, feeRate = 1, ctx = {}, job }) {
   const P = PATHS[path]; need(P, 'UnknownPath', String(path));
+  // Everything below (parameters, locks, contracts, tA4) comes from a FRESH verified rebuild of the claimed chain (I12).
+  const chain = assertChain(claimed);
   const p = chain.params, L = chain.locks;
   const phi = ctx.phi ?? 100;
   need(phi === 100 || phi === 50, 'BadPhi', 'phi must be 100 or 50');
   const ck = P.c.includes('|') ? (phi === 100 ? 'd100' : 'd50') : P.c;
   const contract = chain.contracts[ck];
   need(utxo && typeof utxo.satoshis === 'bigint', 'BadUtxo', 'contract UTXO required');
-  assertChain(chain); // I12: the chain's addresses are exactly what its parameters produce
+  checkOutpoint(utxo, 'contract UTXO');
   // the supplied UTXO must really sit at the expected contract lock, and carry no CashTokens/NFTs (BCH-only boundary)
   need(utxo.lockingBytecode !== undefined && utxo.lockingBytecode !== null, 'UtxoLockMissing', 'contract UTXO must include its actual lockingBytecode');
   need(sameBytes(bytesOf(utxo.lockingBytecode), L[ck]), 'UtxoLockMismatch', `UTXO is not locked by the ${ck} contract of this chain`);
   need(!utxo.token, 'ContractUtxoToken', 'contract UTXO must carry no token or NFT (BCH-only)');
   need(Array.isArray(sponsors) && sponsors.length >= 1 && sponsors.length <= 2, 'SponsorCount', 'R-0 needs 1 or 2 sponsor inputs (2..3 inputs in total)');
-  for (const s of sponsors) need(!s.token, 'SponsorToken', 'sponsor inputs must carry no token or NFT (tokenCategory == 0x)');
-  need(feeRate > 0 && feeRate <= MAX_FEE_RATE, 'FeeRate', `fee rate must be in (0, ${MAX_FEE_RATE}] sat/byte`);
+  const contractLocks = ['funded', 'accepted', 'requested', 'd100', 'd50'].map((k) => L[k]);
+  const seenOutpoints = new Set([`${utxo.txid.toLowerCase()}:${utxo.vout}`]);
+  for (const s of sponsors) {
+    need(s && !s.token, 'SponsorToken', 'sponsor inputs must carry no token or NFT (tokenCategory == 0x)');
+    checkOutpoint(s, 'sponsor');
+    need(typeof s.satoshis === 'bigint' && s.satoshis > 0n, 'BadSponsor', 'sponsor satoshis must be a positive bigint');
+    need(s.lockingBytecode !== undefined && s.lockingBytecode !== null && bytesOf(s.lockingBytecode).length > 0, 'BadSponsor', 'sponsor needs its lockingBytecode');
+    need(!contractLocks.some((cl) => sameBytes(cl, bytesOf(s.lockingBytecode))), 'SponsorIsContract', 'a sponsor input must not sit at a GigPact contract lock');
+    const key = `${s.txid.toLowerCase()}:${s.vout}`;
+    need(!seenOutpoints.has(key), 'SponsorDuplicate', 'sponsor outpoints must be distinct from each other and from the contract UTXO');
+    seenOutpoints.add(key);
+  }
+  need(typeof feeRate === 'number' && feeRate >= 1 && feeRate <= MAX_FEE_RATE, 'FeeRate', `fee rate must be in [1, ${MAX_FEE_RATE}] sat/byte`);
   if (path === 'F1') { need(job, 'K17NotDeclared', 'F1 needs the job record (K17)'); assertF1Funding(job, utxo, chain); }
   const F = utxo.satoshis;
   const outs = P.outs(L, F, p, phi).map(([lock, amount]) => ({ lock, amount }));
@@ -83,7 +99,7 @@ export function planSpend({ chain, path, utxo, sponsors, feeRate = 1, ctx = {}, 
     const N = p[P.csv]; seq0 = csvSequence(N);
     if (!ctx.dryRun) { need(ctx.confirmations !== undefined, 'MissingContext', 'confirmations required'); need(BigInt(ctx.confirmations) >= N, 'TooEarly', `${path} needs the UTXO to have >= ${N} confirmations`); }
   }
-  return { path, contractKey: ck, contract, fn: P.fn, signer: P.signer, input0: { ...utxo, lockingBytecode: bytesOf(utxo.lockingBytecode), sequence: seq0 }, sponsors: sponsors.map((s) => ({ ...s, sequence: SEQ_NONFINAL })), outs, locktime, feeRate, phi };
+  return { path, contractLocks, contractKey: ck, contract, fn: P.fn, signer: P.signer, input0: { ...utxo, lockingBytecode: bytesOf(utxo.lockingBytecode), sequence: seq0 }, sponsors: sponsors.map((s) => ({ ...s, sequence: SEQ_NONFINAL })), outs, locktime, feeRate, phi };
 }
 
 // Turn a plan into a CashScript builder. keys: { V, W, A } role keys and S sponsor key (local signer / dry-run only).
@@ -101,55 +117,70 @@ export function toBuilder(plan, { provider, keys, SignatureTemplate, changeLock,
   return b;
 }
 
-// Account for the transaction as actually serialized: version, outputs, real fee, real change.
-// totalIn = contract input + sponsor inputs. Throws if anything the plan promised is not in the bytes.
-export function inspectTx(plan, hex) {
+// Account for the transaction as actually serialized and compare it with the plan: version, input order and
+// outpoints, sequences, locktime, every contract output (lock and amount), the change output, real fee and change.
+// Throws if anything the plan promised is not in the bytes. changeLock (optional) is checked on the change output.
+export function inspectTx(plan, hex, changeLock) {
   const tx = decodeTransactionBch(hexToBin(hex));
   need(typeof tx !== 'string', 'BadTx', String(tx));
   need(tx.version >= 2, 'TxVersion', `transaction version ${tx.version} < 2 (BIP68 relative locks are not enforced below version 2)`);
   const S = plan.sponsors.reduce((a, s) => a + s.satoshis, 0n);
   const totalIn = plan.input0.satoshis + S;
-  const outSum = tx.outputs.reduce((a, o) => a + o.valueSatoshis, 0n);
   const n = plan.outs.length;
-  // contract-funded outputs come first and must be exactly the plan; the contract value pays no fee
+  const ins = [plan.input0, ...plan.sponsors];
+  need(tx.inputs.length === ins.length, 'PlanMismatch', 'input count differs from the plan');
+  ins.forEach((u, i) => {
+    need(binToHex(tx.inputs[i].outpointTransactionHash) === u.txid.toLowerCase() && tx.inputs[i].outpointIndex === u.vout, 'PlanMismatch', `input ${i} outpoint differs from the plan`);
+    need(tx.inputs[i].sequenceNumber === u.sequence, 'PlanMismatch', `input ${i} nSequence differs from the plan`);
+  });
+  need(tx.locktime === plan.locktime, 'PlanMismatch', 'locktime differs from the plan');
+  need(tx.outputs.length === n || tx.outputs.length === n + 1, 'BadTx', 'unexpected output count');
+  plan.outs.forEach((o, i) => {
+    need(tx.outputs[i].valueSatoshis === o.amount && sameBytes(tx.outputs[i].lockingBytecode, bytesOf(o.lock)), 'PlanMismatch', `contract output ${i} differs from the plan`);
+    need(!tx.outputs[i].token, 'PlanMismatch', `contract output ${i} carries a token`);
+  });
+  const outSum = tx.outputs.reduce((a, o) => a + o.valueSatoshis, 0n);
   const contractOut = tx.outputs.slice(0, n).reduce((a, o) => a + o.valueSatoshis, 0n);
   need(contractOut === plan.input0.satoshis, 'Conservation', 'serialized contract outputs differ from the contract input value');
-  need(tx.outputs.length === n || tx.outputs.length === n + 1, 'BadTx', 'unexpected output count');
-  const change = tx.outputs.length === n + 1 ? tx.outputs[n].valueSatoshis : 0n;
+  const hasChange = tx.outputs.length === n + 1;
+  const change = hasChange ? tx.outputs[n].valueSatoshis : 0n;
+  if (hasChange) {
+    need(change >= MIN_OUTPUT, 'BadTx', 'change output below the output floor');
+    need(!tx.outputs[n].token, 'PlanMismatch', 'change output carries a token');
+    if (changeLock) need(sameBytes(tx.outputs[n].lockingBytecode, bytesOf(changeLock)), 'PlanMismatch', 'change output lock differs from changeLock');
+  }
   const fee = totalIn - outSum;
-  need(fee === S - change, 'Accounting', 'fee must equal the sponsor total minus change');
-  const size = hex.length / 2;
-  return { version: tx.version, locktime: tx.locktime, fee, change, hasChange: tx.outputs.length === n + 1, size, totalIn, outSum, sequences: tx.inputs.map((i) => i.sequenceNumber) };
+  need(fee === S - change && fee >= 0n, 'Accounting', 'fee must equal the sponsor total minus change');
+  return { version: tx.version, locktime: tx.locktime, fee, change, hasChange, size: hex.length / 2, totalIn, outSum, sequences: tx.inputs.map((i) => i.sequenceNumber) };
 }
 
-// Build with a fee that matches the real size at feeRate. The returned fee/change are read back from the
-// serialized transaction, never from the target. If the leftover would be below MIN_OUTPUT the change output is
-// dropped and the whole sponsor remainder becomes fee; that is only allowed while the ACTUAL fee rate stays
-// within MAX_FEE_RATE (FEE_SLACK sat of rounding allowed), otherwise the build is refused.
+// Build with a fee that matches the real size at feeRate. Two shapes exist and both sizes are fixed (Schnorr
+// signatures and 8-byte amounts are fixed width), so no iteration is needed: the with-change shape is used whenever the
+// fitted fee leaves at least MIN_OUTPUT of change; otherwise the change output is dropped and the WHOLE sponsor
+// remainder becomes the fee, which must still pass the fee-rate cap. Returned fee/change are read back from the bytes.
 export function buildTx(plan, opts) {
   need(opts.changeLock, 'NoChangeLock', 'sponsor change lock required');
+  need(!plan.contractLocks.some((l) => sameBytes(l, bytesOf(opts.changeLock))), 'ChangeToContract', 'change must not be sent to a GigPact contract lock');
+  need(typeof plan.feeRate === 'number' && plan.feeRate >= 1 && plan.feeRate <= MAX_FEE_RATE, 'FeeRate', `fee rate must be in [1, ${MAX_FEE_RATE}] sat/byte`);
   const S = plan.sponsors.reduce((a, s) => a + s.satoshis, 0n);
-  const MARGIN = 2n; // rounding / signature-length allowance on top of size * feeRate
-  // The size is learned from unchecked probe builds (no SDK fee checks), iterated to a fixed point; the real, checked
-  // build happens once at the end. Pass 0 leaves >= 600 sat of change so the probe already has the change output.
+  const MARGIN = 2n; // rounding allowance on top of size * feeRate
   const sizeOf = (fee) => encodeTransactionBch(toBuilder(plan, { ...opts, fee }).buildLibauthTransaction(true)).length;
-  let fee = S > 1200n ? S - 600n : S, settled = false;
-  for (let i = 0; i < 6 && !settled; i++) {
-    const next = BigInt(Math.ceil(sizeOf(fee) * plan.feeRate)) + MARGIN;
-    if (S - fee < MIN_OUTPUT) { // no change output: the whole remainder S is the fee, so S itself must cover the size
-      need(next <= S, 'InsufficientSponsor', `sponsor inputs (${S} sat) cannot pay the ${next} sat fee`); settled = true;
-    } else if (next === fee) settled = true;
-    else { fee = next; need(fee <= S, 'InsufficientSponsor', `sponsor inputs (${S} sat) cannot pay the ${fee} sat fee`); }
+  const need_ = (size) => BigInt(Math.ceil(size * plan.feeRate)) + MARGIN;
+  let fee;
+  const feeC = S > MIN_OUTPUT ? need_(sizeOf(S - MIN_OUTPUT)) : undefined; // fee for the with-change shape
+  if (feeC !== undefined && S - feeC >= MIN_OUTPUT) fee = feeC;
+  else {
+    const feeN = need_(sizeOf(S)); // no change output: fee == S
+    need(feeN <= S, 'InsufficientSponsor', `sponsor inputs (${S} sat) cannot pay the ${feeN} sat fee`);
+    fee = S;
   }
-  need(settled, 'FeeUnstable', 'fee did not converge');
   const b = toBuilder(plan, { ...opts, fee });
   let hex;
   try { hex = b.build(); } catch (e) {
     if (/FeePerByteTooLow/i.test(String(e?.name)) || /lower than the standard minimum fee/.test(String(e?.message))) throw new SpendError('InsufficientSponsor', `sponsor inputs (${S} sat) cannot pay the minimum fee`);
     throw e;
   }
-  // everything returned is read back from the serialized bytes
-  const a = inspectTx(plan, hex);
+  const a = inspectTx(plan, hex, opts.changeLock);
   need(a.fee >= BigInt(a.size), 'FeeTooLow', `actual fee ${a.fee} sat is below the 1 sat/byte relay minimum for ${a.size} bytes`);
   need(a.fee <= BigInt(a.size) * BigInt(MAX_FEE_RATE) + FEE_SLACK, 'FeeTooHigh', `actual fee ${a.fee} sat on ${a.size} bytes exceeds ${MAX_FEE_RATE} sat/byte${a.hasChange ? '' : ' (change below ' + MIN_OUTPUT + ' sat was dropped into the fee)'}`);
   return { builder: b, hex, fee: a.fee, size: a.size, change: a.change, hasChange: a.hasChange, version: a.version };

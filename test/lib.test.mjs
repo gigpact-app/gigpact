@@ -12,7 +12,9 @@ import { binToHex, hexToBin, decodeTransactionBch, createVirtualMachineBch2025, 
 const pk = (k) => tpl(k).publicKey;
 const base = () => ({ pk: { V: pk(keys.V), W: pk(keys.W), A: pk(keys.A) }, lock: { V: locks.V, W: locks.W, A: locks.A }, F: 100000n, fA: 2000n, tEnd: 800000n });
 const chainOf = (p = base()) => buildChain(p, { provider });
-const fake = (sats) => { const u = randomUtxo({ satoshis: sats }); return { txid: u.txid, vout: u.vout, satoshis: sats }; };
+// unique synthetic outpoints (cashscript's randomUtxo draws txids from only 10,000 values, which can collide and trip SponsorDuplicate)
+let outpointCounter = 0;
+const fake = (sats) => { outpointCounter += 1; return { txid: outpointCounter.toString(16).padStart(64, '0'), vout: outpointCounter % 4, satoshis: sats }; };
 // a synthetic contract UTXO that really sits at the given state's lock (explicit lockingBytecode, as the library now requires)
 const at = (chain, key, sats) => ({ ...fake(sats), lockingBytecode: chain.locks[key] });
 const sponsor = (sats = 20000n, extra = {}) => ({ ...fake(sats), lockingBytecode: locks.S, ...extra });
@@ -336,4 +338,94 @@ test('K17: a job is bound to the exact chain it was created for', () => {
   // a chain object whose addresses do not follow from its parameters is refused (I12 self-consistency)
   const forged = { ...C, params: { ...C.params, fA: 2500n } };
   assert.throws(() => plan(forged, out, job), (e) => e instanceof ParamError);
+});
+
+// ---- Review round 2: chain integrity, job isolation, sponsor validation, inspectTx vs plan -----
+test('chain object is never trusted: forged locks/contracts/params/tA4 are refused on every path', () => {
+  const evilLock = locks.X;
+  const E = chainOf({ ...base(), dv: 433n });
+  const forgeries = {
+    'locks.W + locks.accepted replaced': (c) => ({ ...c, locks: { ...c.locks, W: evilLock, accepted: evilLock } }),
+    'one contract lock replaced': (c) => ({ ...c, locks: { ...c.locks, requested: E.locks.requested } }),
+    'locks.V replaced': (c) => ({ ...c, locks: { ...c.locks, V: evilLock } }),
+    'extra lock key': (c) => ({ ...c, locks: { ...c.locks, extra: evilLock } }),
+    'contract object swapped': (c) => ({ ...c, contracts: { ...c.contracts, accepted: E.contracts.accepted } }),
+    'address replaced': (c) => ({ ...c, addresses: { ...c.addresses, d50: E.addresses.accepted } }),
+    'fA changed in params': (c) => ({ ...c, params: { ...c.params, fA: 1500n } }),
+    'tA4 forged': (c) => ({ ...c, params: { ...c.params, tA4: 1n } }),
+    'extra param': (c) => ({ ...c, params: { ...c.params, extra: 1n } }),
+  };
+  for (const [name, forge] of Object.entries(forgeries)) for (const [id, key] of [['A1', 'accepted'], ['F2', 'funded'], ['D1', 'd100'], ['A4', 'accepted']]) {
+    const bad = forge(C);
+    assert.throws(() => planSpend({ chain: bad, path: id, utxo: at(C, key, 100000n), sponsors: [sponsor()], ctx: { dryRun: true } }), (e) => e instanceof ParamError, `${name} on ${id}`);
+  }
+  // no memoisation: a chain that was valid once and is mutated later is caught on the next plan
+  const live = chainOf();
+  assert.ok(planSpend({ chain: live, path: 'D1', utxo: at(live, 'd100', 100000n), sponsors: [sponsor()], ctx: { dryRun: true } }));
+  live.params.fA = 1500n;
+  assert.throws(() => planSpend({ chain: live, path: 'D1', utxo: at(live, 'd100', 100000n), sponsors: [sponsor()], ctx: { dryRun: true } }), (e) => e instanceof ParamError);
+  const live2 = chainOf(); planSpend({ chain: live2, path: 'A4', utxo: at(live2, 'accepted', 100000n), sponsors: [sponsor()], ctx: { dryRun: true } });
+  live2.params.tA4 = 1n;
+  assert.throws(() => planSpend({ chain: live2, path: 'A4', utxo: at(live2, 'accepted', 100000n), sponsors: [sponsor()], ctx: { dryRun: true } }), (e) => e instanceof ParamError);
+});
+
+test('job record does not share objects with the chain it was created from', () => {
+  const chain = chainOf(); const out = at(chain, 'funded', chain.params.F);
+  const job = jobFor(chain, out);
+  assert.notEqual(job.params, chain.params); assert.notEqual(job.params.pk.V, chain.params.pk.V);
+  job.params.fA = 1500n; job.params.pk.A[1] ^= 1;
+  assert.equal(chain.params.fA, 2000n, 'mutating the job does not change the chain');
+  throwsCode(() => planSpend({ chain, path: 'F1', utxo: out, sponsors: [sponsor()], ctx: {}, job }), 'K17ParamMismatch');
+  const job2 = jobFor(chain, out); chain.params.fA = 1500n;
+  assert.equal(job2.params.fA, 2000n, 'mutating the chain does not change the job');
+});
+
+test('sponsor validation: distinct real outpoints, positive bigint value, a lock, never a contract lock', () => {
+  const mk = (sponsors, o = {}) => planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors, ctx: {}, ...o });
+  const s = sponsor(20000n);
+  throwsCode(() => mk([s, s]), 'SponsorDuplicate');
+  throwsCode(() => mk([s, { ...sponsor(5000n), txid: s.txid.toUpperCase(), vout: s.vout }]), 'SponsorDuplicate');
+  const cu = at(C, 'accepted', 100000n);
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: cu, sponsors: [{ ...sponsor(100000n), txid: cu.txid, vout: cu.vout }], ctx: {} }), 'SponsorDuplicate'); // contract outpoint reused
+  throwsCode(() => mk([{ ...s, satoshis: 20000 }]), 'BadSponsor'); throwsCode(() => mk([{ ...s, satoshis: -5000n }]), 'BadSponsor'); throwsCode(() => mk([{ ...s, satoshis: 0n }]), 'BadSponsor');
+  throwsCode(() => mk([{ ...s, lockingBytecode: undefined }]), 'BadSponsor'); throwsCode(() => mk([{ ...s, lockingBytecode: new Uint8Array(0) }]), 'BadSponsor');
+  for (const k of ['funded', 'accepted', 'requested', 'd100', 'd50']) throwsCode(() => mk([{ ...s, lockingBytecode: C.locks[k] }]), 'SponsorIsContract');
+  throwsCode(() => mk([{ ...s, txid: 'zz' }]), 'BadOutpoint'); throwsCode(() => mk([{ ...s, vout: -1 }]), 'BadOutpoint'); throwsCode(() => mk([{ ...s, vout: 1.5 }]), 'BadOutpoint');
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: { ...cu, txid: 'abc' }, sponsors: [s], ctx: {} }), 'BadOutpoint');
+  throwsCode(() => planSpend({ chain: C, path: 'A1', utxo: { ...cu, vout: -1 }, sponsors: [s], ctx: {} }), 'BadOutpoint');
+  assert.ok(mk([s, sponsor(5000n)]), 'two distinct sponsors are fine');
+  throwsCode(() => mk([s], { feeRate: 0.5 }), 'FeeRate'); // policy is [1, 2] sat/byte
+  throwsCode(() => mk([s], { feeRate: '1' }), 'FeeRate');
+});
+
+test('buildTx: change never goes to a contract lock; inspectTx compares the bytes with the plan', () => {
+  const plan = planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor(30000n)], ctx: {} });
+  for (const k of ['funded', 'accepted', 'requested', 'd100', 'd50']) assert.throws(() => buildTx(plan, { provider, keys, SignatureTemplate, changeLock: C.locks[k] }), (e) => e.code === 'ChangeToContract');
+  const r = buildTx(plan, { provider, keys, SignatureTemplate, changeLock: locks.S });
+  assert.ok(inspectTx(plan, r.hex, locks.S));
+  throwsCode(() => inspectTx(plan, r.hex, locks.X), 'PlanMismatch');                                   // change lock differs
+  const other = planSpend({ chain: C, path: 'A2', utxo: { ...plan.input0, lockingBytecode: plan.input0.lockingBytecode }, sponsors: plan.sponsors, ctx: {} });
+  throwsCode(() => inspectTx(other, r.hex), 'PlanMismatch');                                              // A1 bytes vs A2 plan: contract output lock differs
+  throwsCode(() => inspectTx({ ...plan, locktime: 5 }, r.hex), 'PlanMismatch');                           // locktime
+  throwsCode(() => inspectTx({ ...plan, input0: { ...plan.input0, sequence: 1 } }, r.hex), 'PlanMismatch'); // sequence
+  throwsCode(() => inspectTx({ ...plan, sponsors: [{ ...plan.sponsors[0], vout: plan.sponsors[0].vout + 1 }] }, r.hex), 'PlanMismatch'); // outpoint
+  const bumped = { ...plan, outs: [{ ...plan.outs[0], amount: plan.outs[0].amount - 1n }] };
+  throwsCode(() => inspectTx(bumped, r.hex), 'PlanMismatch');                                              // amount
+  // a transaction whose output 0 carries a token is refused even if value and lock match
+  assert.throws(() => buildTx({ ...plan, feeRate: 0.5 }, { provider, keys, SignatureTemplate, changeLock: locks.S }), (e) => e.code === 'FeeRate');
+});
+
+test('fee cap is pinned: a no-change remainder one satoshi over size*2+2 is refused', () => {
+  const run = (S, feeRate) => { const plan = planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor(S)], feeRate, ctx: {} });
+    return buildTx(plan, { provider, keys, SignatureTemplate, changeLock: locks.S }); };
+  const big = run(40000n, 2), sizeC = BigInt(big.size), sizeN = sizeC - 34n;
+  assert.equal(big.fee, 2n * sizeC + 2n, 'with-change fee at 2 sat/byte = 2*size + 2');
+  // cap for the no-change shape is 2*sizeN + 2
+  const ok = run(2n * sizeN + 2n, 2); assert.equal(ok.hasChange, false); assert.equal(ok.fee, 2n * sizeN + 2n);
+  assert.throws(() => run(2n * sizeN + 3n, 2), (e) => e.code === 'FeeTooHigh');
+  assert.throws(() => run(2n * sizeN + 40n, 2), (e) => e.code === 'FeeTooHigh');
+  // when 546+ of change is possible the library keeps the change instead of burning it (S just above the threshold)
+  const f1 = run(40000n, 1).fee; const withChange = run(f1 + 546n, 1); assert.equal(withChange.hasChange, true); assert.equal(withChange.change, 546n);
+  const s1200 = run(1200n, 1); assert.equal(s1200.hasChange, s1200.change >= 546n);
+  assert.ok(s1200.fee >= BigInt(s1200.size) && s1200.fee <= BigInt(s1200.size) + 4n || !s1200.hasChange);
 });
