@@ -4,6 +4,10 @@
 // Any other UTXO at the Funded address is "foreign": it never counts as job funding. F2 (cancel) can still
 // return it to the employer (G1-01: no value floor), subject to network relay policy and a sponsor input.
 import { SpendError } from './errors.mjs';
+import { assertChain, canonParams } from './chain.mjs';
+
+// A job record is bound to ONE chain: its parameters and every contract address (I12).
+export const newJob = (chain) => ({ params: chain.params, addresses: { ...chain.addresses } });
 
 export const outpointKey = (u) => `${u.txid}:${u.vout}`;
 
@@ -21,7 +25,21 @@ export function classifyFunded(job, utxos) {
   return { declared, foreign, declaredMissing: !!d && !declared, undeclared: !d };
 }
 
-export function assertF1Funding(job, utxo) {
+// The job must belong to exactly the chain being spent (same parameters, same five contract addresses),
+// and that chain must itself be consistent with its parameters.
+export function assertJobChain(job, chain) {
+  if (!job?.params || !job?.addresses) throw new SpendError('K17ChainMismatch', 'job has no recorded parameters/addresses');
+  assertChain(chain);
+  const keys = Object.keys(chain.addresses);
+  const bad = keys.filter((k) => job.addresses[k] !== chain.addresses[k]);
+  if (bad.length || Object.keys(job.addresses).length !== keys.length) throw new SpendError('K17ChainMismatch', `job was created for another chain (addresses differ: ${bad.join(',') || 'extra keys'})`);
+  if (canonParams(job.params) !== canonParams(chain.params)) throw new SpendError('K17ParamMismatch', 'job parameters differ from the chain parameters');
+  return true;
+}
+
+export function assertF1Funding(job, utxo, chain) {
+  if (!chain) throw new SpendError('K17ChainMismatch', 'F1 needs the chain to verify the job against');
+  assertJobChain(job, chain);
   const d = job.declaredFunding;
   if (!d) throw new SpendError('K17NotDeclared', 'job has no declared funding outpoint');
   if (utxo.txid !== d.txid || utxo.vout !== d.vout) throw new SpendError('K17Mismatch', `F1 must spend the declared outpoint ${d.txid}:${d.vout}, not ${utxo.txid}:${utxo.vout}`);

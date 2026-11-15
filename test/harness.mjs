@@ -70,7 +70,7 @@ export function run(spec) {
   catch (e) { return classify(e); }
 }
 
-function classify(e) {
+export function classify(e) {
   const m = String(e.message ?? e).split('\n')[0];
   const mm = m.match(/\.cash:(\d+) (?:Require|Error)/);
   // 'vm' = rejected by script evaluation in the libauth VM; 'builder' = rejected by CashScript/SDK before evaluation

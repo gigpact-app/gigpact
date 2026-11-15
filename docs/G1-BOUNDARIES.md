@@ -8,3 +8,9 @@ Evidence level of G1: source compiled with cashc 0.14.0 on two machines (hashes 
 - G1-04 (boundary): K17 declared-funding-outpoint rule is app/tx-library layer, not coded in the contracts. R-VM tests alone cannot verify K17 (the contract does not see it); it needs the transaction library plus job-identity tests, including fake, duplicate and third-party funding.
 - G1-05 (boundary): DUST_SAFE = 1000 sat is an unmeasured assumption. No recovery guarantee for arbitrary standard outputs before G7 measurement.
 - PUSD mode is not implemented. BCH mode only.
+
+## G2 part 2 status (library layer; evidence level: R-VM dry-run with synthetic outpoints only)
+
+- G1-03 (I12): enforced in `src/chain.mjs` (`buildChain`, `verifyChain`, `assertChain`) and exercised in `test/lib.test.mjs`. Not regtest, wallet or mainnet evidence.
+- G1-04 (K17): enforced in `src/k17.mjs` and `planSpend` (declared outpoint, exact value F, job bound to the exact chain). Job persistence/UI storage does not exist yet.
+- Not proven here: BIP68 UTXO aging, locktime finality against tip/MTP, mempool dust/relay (DUST_SAFE still unmeasured, G1-05), conflicting spends, wallet signing. These remain G3+.
