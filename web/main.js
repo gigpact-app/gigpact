@@ -222,6 +222,8 @@ async function pactScreen(code) {
   const doneMark = () => { try { return JSON.parse(localStorage.getItem(doneKey) || 'null'); } catch { return null; } };
   const markDone = (r) => { try { localStorage.setItem(doneKey, JSON.stringify({ path: r.path, txid: r.txid, to: r.to })); } catch { /* display only */ } };
   let wp = null, cp = null, sp = null, sp2 = null;
+  // The funding box (address + copy button) is only useful before the money moved on; after that it could lead to a second payment.
+  function fundGone(gone) { if (role === 'organizer') roleBox.hidden = gone; }
   async function refresh() {
     try {
       payBox.hidden = true;
@@ -236,19 +238,19 @@ async function pactScreen(code) {
       const claimed = rx.length === 1 && fx.length === 0 && ax.length === 0 && dx === 0;
       sp?.setAccepted(acceptedNow);
       sp2?.setAccepted(claimed);
-      if (claimed) { setState('Claimed', 'ok', `The worker claimed the pay after the event. The money waits at the claim stage (${rx[0].txid}:${rx[0].vout}). After 432 blocks (about 3 days) it can be collected.`); wp?.setFunded(false, true); return; }
-      if (acceptedNow) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${ax[0].txid}:${ax[0].vout}`); wp?.setFunded(false, true); return; }
-      if (ax.length || rx.length || dx) { setState('Past the funded stage', 'warn', 'This pact has moved on to a stage this build does not show.'); wp?.setFunded(false); return; }
+      if (claimed) { setState('Claimed', 'ok', `The worker claimed the pay after the event. The money waits at the claim stage (${rx[0].txid}:${rx[0].vout}). After 432 blocks (about 3 days) it can be collected.`); wp?.setFunded(false, true); fundGone(true); return; }
+      if (acceptedNow) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${ax[0].txid}:${ax[0].vout}`); wp?.setFunded(false, true); fundGone(true); return; }
+      if (ax.length || rx.length || dx) { setState('Past the funded stage', 'warn', 'This pact has moved on to a stage this build does not show.'); wp?.setFunded(false); fundGone(false); return; }
       const exact = us.filter((u) => u.satoshis === p.F);
-      if (exact.length === 1 && us.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${exact[0].txid}:${exact[0].vout}`); wp?.setFunded(true); }
-      else if (us.length === 0 && doneMark()) { const d = doneMark(); if (d.path === 'F2') setState('Cancelled', 'warn', `The organizer cancelled before the worker accepted. The money went back to ${d.to}. Transaction ${d.txid}. Do not pay this pact again.`); else setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true); return; }
+      if (exact.length === 1 && us.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${exact[0].txid}:${exact[0].vout}`); wp?.setFunded(true); fundGone(false); }
+      else if (us.length === 0 && doneMark()) { const d = doneMark(); if (d.path === 'F2') setState('Cancelled', 'warn', `The organizer cancelled before the worker accepted. The money went back to ${d.to}. Transaction ${d.txid}. Do not pay this pact again.`); else setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true); fundGone(true); return; }
       else if (us.length === 0) {
         const used = await everUsed(chain.locks.funded);
-        if (used === false) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); payBox.hidden = false; return; }
-        if (used === true) { setState('Already used', 'warn', 'Money already passed through this pact address and none is left in it. Do not pay it again. Create a new pact for a new gig.'); wp?.setFunded(false, true); return; }
-        setState('Waiting for funding', 'warn', 'Nothing was found at the funding address. The history could not be checked, so the pay box is hidden.'); wp?.setFunded(false); return;
+        if (used === false) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); fundGone(false); payBox.hidden = false; return; }
+        if (used === true) { setState('Already used', 'warn', 'Money already passed through this pact address and none is left in it. Do not pay it again. Create a new pact for a new gig.'); wp?.setFunded(false, true); fundGone(true); return; }
+        setState('Waiting for funding', 'warn', 'Nothing was found at the funding address. The history could not be checked, so the pay box is hidden.'); wp?.setFunded(false); fundGone(false); return;
       }
-      else { setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`); wp?.setFunded(false); }
+      else { setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`); wp?.setFunded(false); fundGone(false); }
     } catch { setState('Cannot check the chain', 'bad', 'The network did not answer. Retrying.'); }
   }
   // Key backup (organizer) and restore (a browser without the key). The key lives only in this browser's storage, so a closed private
