@@ -7,6 +7,7 @@
 Built solo for BCH BLAZE 2026 (DoraHacks). Prototype on Bitcoin Cash **mainnet**. Use small amounts only; there is no independent audit.
 
 - Repository: https://github.com/gigpact-app/gigpact
+- Live app (mainnet prototype, small amounts only): https://gigpact-app.github.io/gigpact/
 - Pre-hackathon declaration: [docs/DECLARATION.md](docs/DECLARATION.md)
 - Before / After: [docs/BEFORE-AFTER.md](docs/BEFORE-AFTER.md)
 

@@ -102,7 +102,7 @@ function home() {
       h('div', { class: 'step' }, h('b', {}, '3 · GET PAID'), h('h3', {}, 'The pact pays you'), h('p', {}, 'After the show you claim your fee. The organizer can object during a waiting period of about 3 days (dispute steps are not open in this prototype); then you collect it.'))),
     realExample(),
     vision(),
-    h('p', { class: 'note' }, 'Prototype on Bitcoin Cash mainnet. You can create a pact, fund it, accept it with a WizardConnect wallet, and pay out or take the money back. Claim after the event, waive and the dispute steps are still being tested. Use small amounts. So far it is built and tested for gigs only; the wider sectors are our vision.')));
+    h('p', { class: 'note' }, 'Prototype on Bitcoin Cash mainnet. You can create a pact, fund it, accept it with a WizardConnect wallet, claim after the event, and pay out, waive or take the money back. Collecting after the 3-day waiting period and the dispute steps are still being tested. Use small amounts. So far it is built and tested for gigs only; the wider sectors are our vision.')));
 }
 
 function newPact() {
