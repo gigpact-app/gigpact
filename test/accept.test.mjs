@@ -6,7 +6,7 @@ import { MockNetworkProvider } from 'cashscript';
 import { binToHex, lockingBytecodeToCashAddress, encodeLockingBytecodeP2pkh, hash160, decodeTransactionBch, hexToBin } from '@bitauth/libauth';
 globalThis.location = { search: '' };
 const { newKey, pubOf, lockOfPk, UiError, chainFor } = await import('../web/pact.js');
-const { acceptPact, declareFromChain, walletCoins, pickSponsors } = await import('../web/accept.js');
+const { acceptPact, cancelPact, declareFromChain, walletCoins, pickSponsors } = await import('../web/accept.js');
 const { simWallet, derive, walletKey } = await import('./wallet-sim.mjs');
 
 const kW = newKey(), kV = newKey();
@@ -107,4 +107,27 @@ test('helpers: pickSponsors and declareFromChain edge cases', () => {
   assert.throws(() => pickSponsors([], lock), UiError);
   assert.equal(pickSponsors([{ satoshis: 5000n }, { satoshis: 4000n }], lock).length, 1);
   assert.throws(() => declareFromChain(chain, [{ txid: T(1), vout: 0, satoshis: 100000n, token: { category: 'aa'.repeat(32), amount: 0n } }]), /token/);
+});
+
+test('cancel (F2): a wrongly sized payment (30,000 instead of 100,000) is returned to the refund address, signed by V, fee from the wallet', async () => {
+  const { p, sent } = net({ funded: [{ txid: T(61), vout: 0, satoshis: 30000n }] });
+  const r = await cancelPact({ pact, keyV: kV, mgr: mgr(), provider: p });
+  assert.equal(sent.length, 1);
+  assert.equal(r.txid, binToHex(txidOf(sent[0])));
+  assert.equal(r.returned, 30000n);
+  const tx = decodeTransactionBch(hexToBin(sent[0]));
+  assert.equal(tx.inputs.length, 2);
+  assert.equal(tx.outputs[0].valueSatoshis, 30000n);
+  assert.equal(binToHex(tx.outputs[0].lockingBytecode), binToHex(pact.lockV));
+  assert.equal(binToHex(tx.inputs[0].outpointTransactionHash), T(61));
+});
+
+test('cancel (F2): nothing to take back, token-only output, wrong key and a misbehaving wallet are refused with nothing broadcast', async () => {
+  let n = net({ funded: [] }); await bad(cancelPact({ pact, keyV: kV, mgr: mgr(), provider: n.p }), /nothing to take back/); assert.equal(n.sent.length, 0);
+  n = net({ funded: [{ txid: T(62), vout: 0, satoshis: 30000n, token: { category: 'aa'.repeat(32), amount: 1n } }] });
+  await bad(cancelPact({ pact, keyV: kV, mgr: mgr(), provider: n.p }), /carries a token/); assert.equal(n.sent.length, 0);
+  n = net({ funded: [{ txid: T(63), vout: 0, satoshis: 30000n }] });
+  await assert.rejects(cancelPact({ pact, keyV: kW, mgr: mgr(), provider: n.p })); assert.equal(n.sent.length, 0); // W's key cannot satisfy the V check
+  n = net({ funded: [{ txid: T(64), vout: 0, satoshis: 30000n }] });
+  await bad(cancelPact({ pact, keyV: kV, mgr: mgr({ sighash: 0x41 }), provider: n.p }), /hash type/); assert.equal(n.sent.length, 0);
 });

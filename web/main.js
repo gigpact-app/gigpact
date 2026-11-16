@@ -5,6 +5,7 @@ import { UiError, newKey, pubOf, lockOfPk, parseAddress, addressOf, parseBch, fm
 import { provider, tip, utxosAt } from './net.js';
 import { h, copy } from './dom.js';
 import { workerPanel } from './worker-ui.js';
+import { cancelPanel } from './cancel-ui.js';
 import { qrSvg } from './dom.js';
 import { qrFor } from './wallet.js';
 
@@ -157,12 +158,13 @@ async function pactScreen(code) {
   const payBox = h('div', { class: 'panel', hidden: true },
     h('h2', {}, 'Pay this pact'), h('p', { class: 'sub' }, `Scan with a wallet app to pay exactly ${fmtBch(p.F)} BCH in one payment. Check the amount in the wallet before you confirm.`),
     h('div', { class: 'qr' }, qrSvg(qrFor(payUri))), h('div', { class: 'addr' }, fundAddr), h('div', { class: 'row' }, payCopy));
-  let wp = null;
+  let wp = null, cp = null;
   async function refresh() {
     try {
       payBox.hidden = true;
       const A = chain.addresses;
       const [us, acc, later] = await Promise.all([utxosAt(A.funded), utxosAt(A.accepted), Promise.all([A.requested, A.d100, A.d50].map((a) => utxosAt(a)))]);
+      cp?.setHeld(us);
       const accOk = acc.filter((u) => u.satoshis === p.F);
       if (accOk.length === 1 && acc.length === 1 && us.length === 0) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${accOk[0].txid}:${accOk[0].vout}`); wp?.setFunded(false, true); return; }
       if (acc.length || later.some((x) => x.length)) { setState('Past the funded stage', 'warn', 'This pact has moved on. Later stages are not shown in this build yet.'); wp?.setFunded(false); return; }
@@ -181,7 +183,8 @@ async function pactScreen(code) {
     : role === 'worker'
       ? (wp = workerPanel({ pact: p, keyW: hexToBin(mineW.sk), onDone: () => refresh() })).el
       : h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.'));
-  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, h('p', { style: 'margin-top:14px' }, statusEl), detail,
+  if (role === 'organizer') cp = cancelPanel({ pact: p, keyV: hexToBin(mineV.sk), onDone: () => refresh() });
+  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(cp ? [cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
     h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…')), payBox), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
   fillEta(); refresh(); timers.push(setInterval(refresh, 20000));
 }

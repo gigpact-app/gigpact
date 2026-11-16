@@ -64,6 +64,17 @@ export function pickSponsors(coins, changeLock) {
   throw new UiError(`The connected wallet needs a little more Bitcoin Cash to pay the network fee (about ${need} sat in one or two payments; found ${have} sat in the first ${SCAN.receive} receive and ${SCAN.change} change addresses).`);
 }
 
+// The connected wallet pays the network fee: look for coins, pick one or two, find where the wallet keeps its change.
+async function findSponsors({ mgr, provider, onStep }) {
+  const derive = (name, i) => mgr.getPubkey(WC_PATHS[name], BigInt(i));
+  onStep('Looking for a coin in your wallet to pay the network fee…');
+  const coins = await walletCoins({ derive, getUtxos: (a) => provider.getUtxos(a) });
+  const pk0 = derive('change', 0);
+  if (!pk0) throw new UiError('The wallet has not shared its change address yet. Reconnect and try again.');
+  const changeLock = lockOfPubkey(pk0);
+  return { derive, changeLock, sponsors: pickSponsors(coins, changeLock) };
+}
+
 // pact: decoded pact (with pkV/lockV). keyW: the worker's role key (Uint8Array). mgr: DappConnectionManager-like
 // ({ getPubkey(child, BigInt), signTransaction({transaction, inputPaths}) }). provider: { getUtxos, sendRawTransaction }.
 // onStep(text) reports progress for the screen. Nothing is sent unless the wallet's answer verifies.
@@ -71,13 +82,7 @@ export async function acceptPact({ pact, keyW, mgr, provider, onStep = () => {} 
   const chain = chainFor(pact, provider);
   onStep('Checking the funding on the chain…');
   const { funded, job } = declareFromChain(chain, await provider.getUtxos(chain.addresses.funded));
-  const derive = (name, i) => mgr.getPubkey(WC_PATHS[name], BigInt(i));
-  onStep('Looking for a coin in your wallet to pay the network fee…');
-  const coins = await walletCoins({ derive, getUtxos: (a) => provider.getUtxos(a) });
-  const pk0 = derive('change', 0);
-  if (!pk0) throw new UiError('The wallet has not shared its change address yet. Reconnect and try again.');
-  const changeLock = lockOfPubkey(pk0);
-  const sponsors = pickSponsors(coins, changeLock);
+  const { derive, changeLock, sponsors } = await findSponsors({ mgr, provider, onStep });
   const plan = planSpend({ chain, path: 'F1', utxo: funded, sponsors, feeRate: 1, ctx: {}, job });
   const sponsorPaths = plan.sponsors.map((s) => findSponsorPath(s.lockingBytecode, derive));
   const { request, expected } = prepareSign(plan, {
@@ -91,4 +96,31 @@ export async function acceptPact({ pact, keyW, mgr, provider, onStep = () => {} 
   const sent = await provider.sendRawTransaction(v.hex);
   if (typeof sent === 'string' && sent.toLowerCase() !== v.txid) throw new UiError(`The network reported another transaction id (${sent}) than the one we signed (${v.txid}). Check the explorer before trying again.`);
   return { txid: v.txid, fee: v.fee, size: v.size, hex: v.hex, accepted: addressOf(chain.locks.accepted) };
+}
+
+// F2 cancel: the organizer takes whatever one output sits at the funding address back to the refund address. Works for any
+// amount (also a wrong one), only while the money is still at the Funded address. Signed with the organizer's role key V; the
+// connected wallet only adds a coin for the network fee. One output per call; run again if there are several.
+export async function cancelPact({ pact, keyV, mgr, provider, onStep = () => {} }) {
+  const chain = chainFor(pact, provider);
+  onStep('Checking the funding address…');
+  const held = await provider.getUtxos(chain.addresses.funded);
+  if (held.length === 0) throw new UiError('Nothing is held at the funding address, so there is nothing to take back.');
+  const u = held.find((x) => !x.token);
+  if (!u) throw new UiError('The only output at the funding address carries a token. This app does not move tokens.');
+  const utxo = { txid: u.txid, vout: u.vout, satoshis: u.satoshis, lockingBytecode: Uint8Array.from(chain.locks.funded) };
+  const { derive, changeLock, sponsors } = await findSponsors({ mgr, provider, onStep });
+  const plan = planSpend({ chain, path: 'F2', utxo, sponsors, feeRate: 1, ctx: {} });
+  const sponsorPaths = plan.sponsors.map((s) => findSponsorPath(s.lockingBytecode, derive));
+  const { request, expected } = prepareSign(plan, {
+    provider, keys: { V: keyV }, SignatureTemplate, changeLock, sponsorPaths,
+    userPrompt: `GigPact: cancel the pact "${pact.name}" and return ${u.satoshis} sat to the organizer's refund address. Only the network fee is paid from your wallet.`,
+  });
+  onStep('Waiting for your wallet to approve…');
+  const response = await mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths });
+  const v = verifySigned(expected, response, { derive });
+  onStep('Sending to the network…');
+  const sent = await provider.sendRawTransaction(v.hex);
+  if (typeof sent === 'string' && sent.toLowerCase() !== v.txid) throw new UiError(`The network reported another transaction id (${sent}) than the one we signed (${v.txid}). Check the explorer before trying again.`);
+  return { txid: v.txid, fee: v.fee, size: v.size, hex: v.hex, returned: u.satoshis, refundTo: addressOf(pact.lockV), remaining: held.length - 1 };
 }
