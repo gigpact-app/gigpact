@@ -48,7 +48,7 @@ export function workerPanel({ pact, keyW, onDone }) {
       checkEl.textContent = `Wallet check: first receive address ${first}. Looking for coins…`;
       const coins = await walletCoins({ derive, getUtxos: (a) => provider.getUtxos(a) });
       const total = coins.reduce((a, c) => a + c.satoshis, 0n);
-      checkEl.textContent = `Wallet check: first receive address ${first}. Coins this wallet can sign for: ${coins.length} (${total} sat) in its first addresses. Compare the address with your wallet app.`;
+      checkEl.textContent = `Wallet check: first receive address ${first}. Plain coins this wallet can sign for: ${coins.length} (${total} sat). Looked at ${coins.scanned} addresses; ${coins.failed} lookups failed; ${coins.tokenOutputs} token outputs skipped. Compare the address with your wallet app.`;
     } catch (x) { checkEl.textContent = `Wallet check failed: ${x?.message || x}`; }
   }
   function showPairing(me) {

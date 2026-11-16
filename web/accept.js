@@ -39,11 +39,12 @@ export async function walletCoins({ derive, getUtxos, scan = SCAN }) {
       if (pk) jobs.push({ name, i, lock: lockOfPubkey(pk) });
     }
   }
-  const out = [];
+  const out = []; let failed = 0, tokenOutputs = 0;
   await Promise.all(jobs.map(async (j) => {
-    let us = []; try { us = await getUtxos(addrOfLock(j.lock)); } catch { /* one address failing must not hide the others */ }
-    for (const u of us) if (!u.token && typeof u.satoshis === 'bigint') out.push({ txid: u.txid, vout: u.vout, satoshis: u.satoshis, lockingBytecode: j.lock });
+    let us = []; try { us = await getUtxos(addrOfLock(j.lock)); } catch { failed += 1; /* one address failing must not hide the others, but it is counted */ }
+    for (const u of us) { if (u.token) tokenOutputs += 1; else if (typeof u.satoshis === 'bigint') out.push({ txid: u.txid, vout: u.vout, satoshis: u.satoshis, lockingBytecode: j.lock }); }
   }));
+  out.scanned = jobs.length; out.failed = failed; out.tokenOutputs = tokenOutputs;
   return out.sort((a, b) => (a.satoshis === b.satoshis ? 0 : a.satoshis > b.satoshis ? -1 : 1));
 }
 
