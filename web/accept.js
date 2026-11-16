@@ -10,7 +10,8 @@ import { prepareSign, verifySigned, findSponsorPath, WC_PATHS } from '../src/wiz
 import { UiError, chainFor, addressOf } from './pact.js';
 import { PREFIX } from './config.js';
 
-const SCAN = 15;               // addresses per path name that are looked at for a sponsor coin
+const SCAN = { receive: 60, change: 30 }; // addresses per path name that are looked at for a sponsor coin (a used wallet's open address can be well past 20)
+const CONCURRENCY = 8;
 const FEE_ALLOWANCE = 3000n;   // rough upper bound for the F1 fee, used only to pre-select sponsor coins (buildTx fits the exact fee)
 
 const lockOfPubkey = (pk) => encodeLockingBytecodeP2pkh(hash160(pk));
@@ -34,16 +35,20 @@ export function declareFromChain(chain, utxos) {
 export async function walletCoins({ derive, getUtxos, scan = SCAN }) {
   const jobs = [];
   for (const name of Object.keys(WC_PATHS).filter((n) => n !== 'defi')) {
-    for (let i = 0; i < scan; i++) {
+    for (let i = 0; i < (scan[name] ?? 0); i++) {
       const pk = derive(name, i);
       if (pk) jobs.push({ name, i, lock: lockOfPubkey(pk) });
     }
   }
-  const out = []; let failed = 0, tokenOutputs = 0;
-  await Promise.all(jobs.map(async (j) => {
-    let us = []; try { us = await getUtxos(addrOfLock(j.lock)); } catch { failed += 1; /* one address failing must not hide the others, but it is counted */ }
-    for (const u of us) { if (u.token) tokenOutputs += 1; else if (typeof u.satoshis === 'bigint') out.push({ txid: u.txid, vout: u.vout, satoshis: u.satoshis, lockingBytecode: j.lock }); }
-  }));
+  const out = []; let failed = 0, tokenOutputs = 0, next = 0;
+  const worker = async () => {
+    while (next < jobs.length) {
+      const j = jobs[next++];
+      let us = []; try { us = await getUtxos(addrOfLock(j.lock)); } catch { failed += 1; /* one address failing must not hide the others, but it is counted */ }
+      for (const u of us) { if (u.token) tokenOutputs += 1; else if (typeof u.satoshis === 'bigint') out.push({ txid: u.txid, vout: u.vout, satoshis: u.satoshis, lockingBytecode: j.lock }); }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, jobs.length) }, worker));
   out.scanned = jobs.length; out.failed = failed; out.tokenOutputs = tokenOutputs;
   return out.sort((a, b) => (a.satoshis === b.satoshis ? 0 : a.satoshis > b.satoshis ? -1 : 1));
 }
@@ -56,7 +61,7 @@ export function pickSponsors(coins, changeLock) {
   if (single) return [single];
   if (coins.length >= 2 && coins[0].satoshis + coins[1].satoshis >= need) return [coins[0], coins[1]];
   const have = coins.reduce((a, c) => a + c.satoshis, 0n);
-  throw new UiError(`The connected wallet needs a little more Bitcoin Cash to pay the network fee (about ${need} sat in one or two payments; found ${have} sat in the first ${SCAN} receive and change addresses).`);
+  throw new UiError(`The connected wallet needs a little more Bitcoin Cash to pay the network fee (about ${need} sat in one or two payments; found ${have} sat in the first ${SCAN.receive} receive and ${SCAN.change} change addresses).`);
 }
 
 // pact: decoded pact (with pkV/lockV). keyW: the worker's role key (Uint8Array). mgr: DappConnectionManager-like
