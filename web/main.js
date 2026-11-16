@@ -174,6 +174,31 @@ async function pactScreen(code) {
       else { setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`); wp?.setFunded(false); }
     } catch { setState('Cannot check the chain', 'bad', 'The network did not answer. Retrying.'); }
   }
+  // Key backup (organizer) and restore (a browser without the key). The key lives only in this browser's storage, so a closed private
+  // window or cleared site data loses it for good: without it the money at the funding address cannot be taken back.
+  const keyBox = () => {
+    const b = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy backup key');
+    b.addEventListener('click', () => copy(mineV.sk, b));
+    return h('div', { class: 'panel' }, h('h2', {}, 'Back up your organizer key'),
+      h('p', { class: 'sub' }, 'This key is stored only in this browser. If this window is closed or its data cleared, the key is gone and the money cannot be taken back. Copy it now and keep it somewhere safe (for example a note).'),
+      h('div', { class: 'addr' }, mineV.sk), h('div', { class: 'row' }, b),
+      h('p', { class: 'note' }, 'Keep it private. With it, the pact can be cancelled; the money would go to your refund address, not to the holder of the key.'));
+  };
+  const restoreBox = () => {
+    const input = h('input', { placeholder: 'Backup key (64 characters)', autocomplete: 'off', spellcheck: 'false' });
+    const err = h('p', { class: 'err', role: 'alert' });
+    const b = h('button', { class: 'btn small', type: 'button' }, 'Restore key');
+    b.addEventListener('click', () => {
+      err.textContent = '';
+      const k = input.value.trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(k)) { err.textContent = 'The backup key is 64 characters (0-9 and a-f).'; return; }
+      let pk; try { pk = binToHex(pubOf(hexToBin(k))); } catch { err.textContent = 'That is not a valid key.'; return; }
+      if (pk !== pkVhex) { err.textContent = 'This key does not belong to this pact.'; return; }
+      if (!store.put(pkVhex, k, { role: 'V' })) { err.textContent = 'This browser would not let the app save the key. Allow site storage and try again.'; return; }
+      route();
+    });
+    return h('div', { class: 'panel' }, h('h2', {}, 'Are you the organizer?'), h('p', { class: 'sub' }, 'If you saved the organizer backup key of this pact, paste it here to get your controls back.'), input, err, h('div', { class: 'row' }, b));
+  };
   const sendBack = `${location.origin}${location.pathname}#/pact/${code}`;
   const roleBox = role === 'organizer'
     ? h('div', { class: 'panel' }, h('h2', {}, 'Fund this pact'), h('p', { class: 'sub' }, `Send exactly ${fmtBch(p.F)} BCH to this address, in one payment, from any wallet:`),
@@ -182,9 +207,9 @@ async function pactScreen(code) {
         h('div', { class: 'addr' }, sendBack), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy link for the worker'); b.addEventListener('click', () => copy(sendBack, b)); return b; })()))
     : role === 'worker'
       ? (wp = workerPanel({ pact: p, keyW: hexToBin(mineW.sk), onDone: () => refresh() })).el
-      : h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.'));
+      : h('div', {}, h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.')), restoreBox());
   if (role === 'organizer') cp = cancelPanel({ pact: p, keyV: hexToBin(mineV.sk), onDone: () => refresh() });
-  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(cp ? [cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
+  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(cp ? [keyBox(), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
     h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…')), payBox), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
   fillEta(); refresh(); timers.push(setInterval(refresh, 20000));
 }
