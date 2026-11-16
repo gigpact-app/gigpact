@@ -12,5 +12,9 @@
   "devDependencies": {
     "cashc": "0.14.0",
     "cashscript": "0.14.0"
+  },
+  "dependencies": {
+    "@wizardconnect/core": "0.2.10",
+    "@wizardconnect/dapp": "0.2.7"
   }
 }

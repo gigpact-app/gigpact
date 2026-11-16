@@ -126,13 +126,14 @@ export function planSpend({ chain: claimed, path, utxo: utxoIn, sponsors: sponso
 }
 
 // Turn a plan into a CashScript builder. keys: { V, W, A } role keys and S sponsor key (local signer / dry-run only).
-export function toBuilder(plan, { provider, keys, SignatureTemplate, changeLock, fee }) {
+// sponsorUnlock (optional, WizardConnect): s => unlocker for a sponsor input, used when a wallet signs it instead of keys.S.
+export function toBuilder(plan, { provider, keys, SignatureTemplate, changeLock, fee, sponsorUnlock }) {
   const sigArgs = plan.signer ? [new SignatureTemplate(keys[plan.signer], SIGHASH_61)] : [];
   const b = new TransactionBuilder({ provider, maximumFeeSatoshis: 1_000_000n });
   const c0 = { txid: plan.input0.txid, vout: plan.input0.vout, satoshis: plan.input0.satoshis, lockingBytecode: binToHex(plan.input0.lockingBytecode) };
   b.addInput(c0, plan.contract.unlock[plan.fn](...sigArgs), { sequence: plan.input0.sequence });
   let S = 0n;
-  for (const s of plan.sponsors) { b.addInput({ txid: s.txid, vout: s.vout, satoshis: s.satoshis, lockingBytecode: binToHex(s.lockingBytecode) }, new SignatureTemplate(keys.S, SIGHASH_61).unlockP2PKH(), { sequence: s.sequence }); S += s.satoshis; }
+  for (const s of plan.sponsors) { b.addInput({ txid: s.txid, vout: s.vout, satoshis: s.satoshis, lockingBytecode: binToHex(s.lockingBytecode) }, sponsorUnlock ? sponsorUnlock(s) : new SignatureTemplate(keys.S, SIGHASH_61).unlockP2PKH(), { sequence: s.sequence }); S += s.satoshis; }
   for (const o of plan.outs) b.addOutput({ to: o.lock, amount: o.amount });
   const change = S - fee;
   if (change >= changeFloor(changeLock)) b.addOutput({ to: changeLock, amount: change });

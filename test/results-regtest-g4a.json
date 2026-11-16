@@ -1,0 +1,33 @@
+{
+ "level": "regtest+software-wallet",
+ "node": "/Bitcoin Cash Node:29.2.0/",
+ "cases": [
+  {
+   "name": "node start + 102 blocks",
+   "ok": true,
+   "level": "regtest+software-wallet",
+   "subversion": "/Bitcoin Cash Node:29.2.0/"
+  },
+  {
+   "name": "F1 via software wallet: accepted + mined",
+   "ok": true,
+   "level": "regtest+software-wallet",
+   "txid": "495e02b90d5e01881fe6da9df06019047733360a65ba1db0cd325edd282fbe92",
+   "size": 672,
+   "fee": "674",
+   "inputPaths": [
+    [
+     1,
+     "receive",
+     3
+    ]
+   ]
+  },
+  {
+   "name": "A1 via software wallet: accepted + mined, worker paid F",
+   "ok": true,
+   "level": "regtest+software-wallet",
+   "txid": "2f43325502d1aa84602b7b26548de5e1b45d9642137e3612c1b5e9d1f31b3b85"
+  }
+ ]
+}
