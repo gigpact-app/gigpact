@@ -5,6 +5,8 @@ import { UiError, newKey, pubOf, lockOfPk, parseAddress, addressOf, parseBch, fm
 import { provider, tip, utxosAt } from './net.js';
 import { h, copy } from './dom.js';
 import { workerPanel } from './worker-ui.js';
+import { qrSvg } from './dom.js';
+import { qrFor } from './wallet.js';
 
 const app = document.getElementById('app');
 let timers = [];
@@ -148,9 +150,17 @@ async function pactScreen(code) {
   const role = mineV ? 'organizer' : mineW ? 'worker' : 'viewer';
   const statusEl = h('span', { class: 'state warn' }, 'Checking the chain…'), detail = h('p', { class: 'sub' });
   const setState = (txt, cls, d) => { statusEl.textContent = txt; statusEl.className = `state ${cls}`; detail.textContent = d ?? ''; const c = document.querySelector('.pass .state'); if (c) { c.textContent = txt; c.className = `state ${cls}`; } };
+  // Pay box: BIP21-style URI with the exact amount, as QR and as copyable text. Only shown while nothing has arrived yet.
+  const payUri = `${fundAddr}?amount=${fmtBch(p.F)}`;
+  const payCopy = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy funding address');
+  payCopy.addEventListener('click', () => copy(fundAddr, payCopy));
+  const payBox = h('div', { class: 'panel', hidden: true },
+    h('h2', {}, 'Pay this pact'), h('p', { class: 'sub' }, `Scan with a wallet app to pay exactly ${fmtBch(p.F)} BCH in one payment. Check the amount in the wallet before you confirm.`),
+    h('div', { class: 'qr' }, qrSvg(qrFor(payUri))), h('div', { class: 'addr' }, fundAddr), h('div', { class: 'row' }, payCopy));
   let wp = null;
   async function refresh() {
     try {
+      payBox.hidden = true;
       const A = chain.addresses;
       const [us, acc, later] = await Promise.all([utxosAt(A.funded), utxosAt(A.accepted), Promise.all([A.requested, A.d100, A.d50].map((a) => utxosAt(a)))]);
       const accOk = acc.filter((u) => u.satoshis === p.F);
@@ -158,7 +168,7 @@ async function pactScreen(code) {
       if (acc.length || later.some((x) => x.length)) { setState('Past the funded stage', 'warn', 'This pact has moved on. Later stages are not shown in this build yet.'); wp?.setFunded(false); return; }
       const exact = us.filter((u) => u.satoshis === p.F);
       if (exact.length === 1 && us.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${exact[0].txid}:${exact[0].vout}`); wp?.setFunded(true); }
-      else if (us.length === 0) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); }
+      else if (us.length === 0) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); payBox.hidden = false; return; }
       else { setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`); wp?.setFunded(false); }
     } catch { setState('Cannot check the chain', 'bad', 'The network did not answer. Retrying.'); }
   }
@@ -172,7 +182,7 @@ async function pactScreen(code) {
       ? (wp = workerPanel({ pact: p, keyW: hexToBin(mineW.sk), onDone: () => refresh() })).el
       : h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.'));
   wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, h('p', { style: 'margin-top:14px' }, statusEl), detail,
-    h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…'))), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
+    h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…')), payBox), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
   fillEta(); refresh(); timers.push(setInterval(refresh, 20000));
 }
 
