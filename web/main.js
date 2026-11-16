@@ -118,6 +118,15 @@ async function pactScreen(code) {
   const fillEta = () => etaText(p.tEnd).then((t) => document.querySelectorAll('.eta').forEach((e) => { e.textContent = t; }));
 
   if (!p.pkV) { // organizer, step 1: refund address -> V key -> funding address
+    if (mineW) { // the worker opened their own request link: it is meant for the organizer
+      const own = `${location.origin}${location.pathname}#/pact/${code}`;
+      wrap.append(h('div', { class: 'grid2' }, h('div', { class: 'panel' }, h('h2', {}, 'This is your request link'),
+        h('p', { class: 'sub' }, 'Send it to the organizer. They open it, enter a refund address and get the address to fund. Nothing is locked until they pay.'),
+        h('div', { class: 'addr' }, own), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small', type: 'button' }, 'Copy link'); b.addEventListener('click', () => copy(own, b)); return b; })())),
+        pass(p, { state: 'Waiting for the organizer', stateClass: 'warn', seed: code })));
+      fillEta();
+      return;
+    }
     const id = pactId(code), saved = store.find(`req:${id}`);
     const err = h('p', { class: 'err', role: 'alert' });
     const addr = h('input', { id: 'refund', placeholder: `${NET === 'mainnet' ? 'bitcoincash:q…' : 'bchtest:q…'}`, autocomplete: 'off', spellcheck: 'false' });
@@ -146,7 +155,7 @@ async function pactScreen(code) {
   const fundAddr = chain.addresses.funded;
   const role = mineV ? 'organizer' : mineW ? 'worker' : 'viewer';
   const statusEl = h('span', { class: 'state warn' }, 'Checking the chain…'), detail = h('p', { class: 'sub' });
-  const setState = (txt, cls, d) => { statusEl.textContent = txt; statusEl.className = `state ${cls}`; detail.textContent = d ?? ''; };
+  const setState = (txt, cls, d) => { statusEl.textContent = txt; statusEl.className = `state ${cls}`; detail.textContent = d ?? ''; const c = document.querySelector('.pass .state'); if (c) { c.textContent = txt; c.className = `state ${cls}`; } };
   async function refresh() {
     try {
       const us = await utxosAt(fundAddr);
