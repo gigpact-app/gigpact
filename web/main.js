@@ -59,7 +59,7 @@ function home() {
       h('div', { class: 'step' }, h('b', {}, '1 · LOCK'), h('h3', {}, 'Agree the fee'), h('p', {}, 'You set the fee and the event end. The organizer locks the money into your pact before the gig.')),
       h('div', { class: 'step' }, h('b', {}, '2 · PLAY'), h('h3', {}, 'Do the show'), h('p', {}, 'You accept the pact and play. The money cannot be spent by anyone except along the pact’s rules.')),
       h('div', { class: 'step' }, h('b', {}, '3 · GET PAID'), h('h3', {}, 'The pact pays you'), h('p', {}, 'After the show you claim your fee. If the organizer stays silent, it pays out to you on its own.'))),
-    h('p', { class: 'note' }, 'Prototype. This build creates pacts and funding addresses and watches the chain. Accepting, releasing and refunding are being added and are not live yet.')));
+    h('p', { class: 'note' }, 'Prototype on Bitcoin Cash mainnet. You can create a pact, fund it, accept it with a WizardConnect wallet, and pay out or take the money back. Claim after the event, waive and the dispute steps are still being tested. Use small amounts.')));
 }
 
 function newPact() {
