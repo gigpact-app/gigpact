@@ -24,7 +24,7 @@ Date: 2026-11-16 (Istanbul, about 13:35). Network: Bitcoin Cash mainnet.
 ## What this does NOT show
 - No other path (F2, A2-A4, C1-C4, D1-D6) has run on mainnet or with a real wallet. A2 and A3 have buttons and software-wallet tests only.
   F2 (cancel) has R-VM / regtest / software-wallet tests and a UI button, but the button has not been used with a real wallet yet.
-- Whether the A1 transaction is already confirmed in a block was not checked; the page confirmed it by the Accepted output being spent and by the network accepting the broadcast.
+- Block-explorer check (3xpl.com, 2026-11-16): all three transactions are confirmed. Funding and F1 accept are in block 977,601; A1 pay is in block 977,604. Sizes/fees: funding 229 B / 234 sat, F1 671 B / 673 sat, A1 860 B / 862 sat.
 
 ## Incident on the way (kept for honesty)
 - An earlier test pact ("Test set") received a payment of 30,000 sat instead of 10,000 sat (wrong amount typed in the wallet).
