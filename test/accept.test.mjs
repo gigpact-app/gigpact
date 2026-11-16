@@ -1,0 +1,110 @@
+// web/accept.js (worker accept via a connected wallet) with a SOFTWARE wallet and a FAKE network.
+// Evidence level: R-VM + software wallet. Not regtest, not a real wallet, not mainnet.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { MockNetworkProvider } from 'cashscript';
+import { binToHex, lockingBytecodeToCashAddress, encodeLockingBytecodeP2pkh, hash160, decodeTransactionBch, hexToBin } from '@bitauth/libauth';
+globalThis.location = { search: '' };
+const { newKey, pubOf, lockOfPk, UiError, chainFor } = await import('../web/pact.js');
+const { acceptPact, declareFromChain, walletCoins, pickSponsors } = await import('../web/accept.js');
+const { simWallet, derive, walletKey } = await import('./wallet-sim.mjs');
+
+const kW = newKey(), kV = newKey();
+const pact = { name: 'Friday set', F: 100000n, tEnd: 960000, pkW: pubOf(kW), lockW: lockOfPk(pubOf(kW)), pkV: pubOf(kV), lockV: lockOfPk(pubOf(kV)) };
+const mock = new MockNetworkProvider();
+const chain = chainFor(pact, mock);
+const walletAddr = (name, i) => lockingBytecodeToCashAddress({ bytecode: encodeLockingBytecodeP2pkh(hash160(derive(name, i))), prefix: 'bitcoincash' }).address;
+const T = (n) => `${n}`.padStart(2, '0').repeat(32);
+
+// fake network: utxos by address, records what is broadcast
+function net({ funded = [{ txid: T(11), vout: 0, satoshis: 100000n }], coins = { [walletAddr('receive', 3)]: [{ txid: T(22), vout: 1, satoshis: 30000n }] }, sendResult } = {}) {
+  const sent = [];
+  const p = Object.assign(Object.create(mock), {
+    getUtxos: async (a) => (a === chain.addresses.funded ? funded : coins[a] ?? []),
+    sendRawTransaction: async (hex) => { sent.push(hex); return sendResult ? sendResult(hex) : binToHex(hexToBin(hex).length ? txidOf(hex) : new Uint8Array()); },
+  });
+  return { p, sent };
+}
+import { hashTransactionUiOrder } from '@bitauth/libauth';
+const txidOf = (hex) => hashTransactionUiOrder(hexToBin(hex));
+const mgr = (opts = {}) => ({
+  getPubkey: (child, i) => derive(['receive', 'change'][child] ?? 'defi', Number(i)),
+  signTransaction: async (req) => simWallet(JSON.stringify(req), opts),
+  calls: 0,
+});
+const bad = (promise, re) => assert.rejects(promise, (e) => re.test(e.message));
+
+test('accept: funded pact + wallet coin -> wallet signs, answer verified, broadcast once, txid matches', async () => {
+  const { p, sent } = net();
+  const steps = [];
+  const r = await acceptPact({ pact, keyW: kW, mgr: mgr(), provider: p, onStep: (s) => steps.push(s) });
+  assert.equal(sent.length, 1);
+  assert.equal(r.txid, binToHex(txidOf(sent[0])));
+  const tx = decodeTransactionBch(hexToBin(sent[0]));
+  assert.equal(tx.inputs.length, 2);                                     // contract + one sponsor
+  assert.equal(tx.outputs[0].valueSatoshis, 100000n);                    // the pact money moves intact to the Accepted contract
+  assert.equal(binToHex(tx.outputs[0].lockingBytecode), binToHex(chain.locks.accepted));
+  assert.ok(r.fee >= BigInt(r.size) && r.fee < BigInt(r.size) * 2n + 10n);
+  assert.deepEqual(steps.length, 4);
+});
+
+test('accept: smallest sufficient single coin is chosen; two coins are used only when no single one is enough', async () => {
+  const a = walletAddr('receive', 0), b = walletAddr('change', 1), c = walletAddr('receive', 5);
+  const { p, sent } = net({ coins: { [a]: [{ txid: T(31), vout: 0, satoshis: 900000n }], [b]: [{ txid: T(32), vout: 0, satoshis: 8000n }], [c]: [{ txid: T(33), vout: 0, satoshis: 3000n }] } });
+  await acceptPact({ pact, keyW: kW, mgr: mgr(), provider: p });
+  let tx = decodeTransactionBch(hexToBin(sent[0]));
+  assert.equal(tx.inputs.length, 2);
+  assert.equal(binToHex(tx.inputs[1].outpointTransactionHash), T(32), 'the 8,000 sat coin is the smallest that covers fee allowance + change floor (3,546 sat); the 3,000 sat coin is too small');
+  const two = net({ coins: { [b]: [{ txid: T(34), vout: 0, satoshis: 2500n }], [c]: [{ txid: T(35), vout: 0, satoshis: 2500n }] } });
+  await acceptPact({ pact, keyW: kW, mgr: mgr(), provider: two.p });
+  tx = decodeTransactionBch(hexToBin(two.sent[0]));
+  assert.equal(tx.inputs.length, 3);
+});
+
+test('accept: refuses before asking the wallet when the pact is not exactly funded', async () => {
+  for (const [funded, re] of [[[], /not funded/], [[{ txid: T(11), vout: 0, satoshis: 99999n }], /Exactly one output of 100000 sat/], [[{ txid: T(11), vout: 0, satoshis: 100000n }, { txid: T(12), vout: 0, satoshis: 5000n }], /2 outputs/], [[{ txid: T(11), vout: 0, satoshis: 100000n }, { txid: T(12), vout: 0, satoshis: 100000n }], /2 outputs/]]) {
+    const { p, sent } = net({ funded }); const m = mgr(); let asked = false; m.signTransaction = async () => { asked = true; };
+    await bad(acceptPact({ pact, keyW: kW, mgr: m, provider: p }), re);
+    assert.equal(asked, false); assert.equal(sent.length, 0);
+  }
+});
+
+test('accept: wallet without enough coins -> plain message, wallet never asked', async () => {
+  const { p } = net({ coins: { [walletAddr('receive', 0)]: [{ txid: T(41), vout: 0, satoshis: 900n }] } });
+  const m = mgr(); let asked = false; m.signTransaction = async () => { asked = true; };
+  await bad(acceptPact({ pact, keyW: kW, mgr: m, provider: p }), /needs a little more Bitcoin Cash/);
+  assert.equal(asked, false);
+});
+
+test('accept: token coins and unrelated addresses are never used as sponsors', async () => {
+  const a = walletAddr('receive', 2);
+  const { p } = net({ coins: { [a]: [{ txid: T(51), vout: 0, satoshis: 50000n, token: { category: 'aa'.repeat(32), amount: 1n } }] } });
+  await bad(acceptPact({ pact, keyW: kW, mgr: mgr(), provider: p }), /needs a little more/);
+});
+
+test('accept: a misbehaving wallet is caught before anything is broadcast', async () => {
+  const cases = [
+    ['refused', { error: 'user rejected' }, /refused/],
+    ['wrong sighash', { sighash: 0x41 }, /hash type/],
+    ['unsigned', { skip: true }, /unlocking script is 0 bytes/],
+    ['wrong key', { keyFor: (n, i) => walletKey(n, i + 1) }, /does not match the sponsor address/],
+    ['altered output', { mutate: (tx) => { tx.outputs[0] = { ...tx.outputs[0], valueSatoshis: tx.outputs[0].valueSatoshis - 1n }; } }, /differs from the requested/],
+  ];
+  for (const [name, opts, re] of cases) {
+    const { p, sent } = net();
+    await bad(acceptPact({ pact, keyW: kW, mgr: mgr(opts), provider: p }), re);
+    assert.equal(sent.length, 0, `${name}: nothing broadcast`);
+  }
+});
+
+test('accept: a different txid from the network is reported, not hidden', async () => {
+  const { p } = net({ sendResult: () => 'ab'.repeat(32) });
+  await bad(acceptPact({ pact, keyW: kW, mgr: mgr(), provider: p }), /another transaction id/);
+});
+
+test('helpers: pickSponsors and declareFromChain edge cases', () => {
+  const lock = encodeLockingBytecodeP2pkh(hash160(derive('change', 0)));
+  assert.throws(() => pickSponsors([], lock), UiError);
+  assert.equal(pickSponsors([{ satoshis: 5000n }, { satoshis: 4000n }], lock).length, 1);
+  assert.throws(() => declareFromChain(chain, [{ txid: T(1), vout: 0, satoshis: 100000n, token: { category: 'aa'.repeat(32), amount: 0n } }]), /token/);
+});

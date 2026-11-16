@@ -3,20 +3,13 @@ import { binToHex, hexToBin, sha256 } from '@bitauth/libauth';
 import { NET, MIN_FEE_SAT, MIN_LEAD_BLOCKS } from './config.js';
 import { UiError, newKey, pubOf, lockOfPk, parseAddress, addressOf, parseBch, fmtBch, encodePact, decodePact, pactId, chainFor, checkNumbers, cleanName } from './pact.js';
 import { provider, tip, utxosAt } from './net.js';
+import { h, copy } from './dom.js';
+import { workerPanel } from './worker-ui.js';
 
 const app = document.getElementById('app');
 let timers = [];
 const stopTimers = () => { timers.forEach(clearInterval); timers = []; };
 
-// ---- tiny DOM helper ------------------------------------------------------------------------------------
-function h(tag, attrs = {}, ...kids) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs ?? {})) {
-    if (k === 'class') el.className = v; else if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else if (v !== false && v != null) el.setAttribute(k, v === true ? '' : v);
-  }
-  for (const k of kids.flat()) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(String(k)));
-  return el;
-}
 const link = (href, text, cls) => h('a', { href, class: cls }, text);
 
 // ---- keys kept in this browser ----------------------------------------------------------------------------
@@ -51,7 +44,6 @@ function pass(p, { state, stateClass, eta, seed }) {
 async function etaText(tEnd) {
   try { const t = await tip(); const ms = Date.now() + (tEnd - t) * 600_000; return `${new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (block ${tEnd})`; } catch { return `block ${tEnd}`; }
 }
-const copy = async (text, btn) => { try { await navigator.clipboard.writeText(text); const t = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => (btn.textContent = t), 1400); } catch { btn.textContent = 'Select and copy manually'; } };
 
 // ---- screens ---------------------------------------------------------------------------------------------------
 function home() {
@@ -156,13 +148,18 @@ async function pactScreen(code) {
   const role = mineV ? 'organizer' : mineW ? 'worker' : 'viewer';
   const statusEl = h('span', { class: 'state warn' }, 'Checking the chain…'), detail = h('p', { class: 'sub' });
   const setState = (txt, cls, d) => { statusEl.textContent = txt; statusEl.className = `state ${cls}`; detail.textContent = d ?? ''; const c = document.querySelector('.pass .state'); if (c) { c.textContent = txt; c.className = `state ${cls}`; } };
+  let wp = null;
   async function refresh() {
     try {
-      const us = await utxosAt(fundAddr);
+      const A = chain.addresses;
+      const [us, acc, later] = await Promise.all([utxosAt(A.funded), utxosAt(A.accepted), Promise.all([A.requested, A.d100, A.d50].map((a) => utxosAt(a)))]);
+      const accOk = acc.filter((u) => u.satoshis === p.F);
+      if (accOk.length === 1 && acc.length === 1 && us.length === 0) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${accOk[0].txid}:${accOk[0].vout}`); wp?.setFunded(false, true); return; }
+      if (acc.length || later.some((x) => x.length)) { setState('Past the funded stage', 'warn', 'This pact has moved on. Later stages are not shown in this build yet.'); wp?.setFunded(false); return; }
       const exact = us.filter((u) => u.satoshis === p.F);
-      if (exact.length === 1 && us.length === 1) setState('Funded', 'ok', `Funding found on chain: ${exact[0].txid}:${exact[0].vout}`);
-      else if (us.length === 0) setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.');
-      else setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`);
+      if (exact.length === 1 && us.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${exact[0].txid}:${exact[0].vout}`); wp?.setFunded(true); }
+      else if (us.length === 0) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); }
+      else { setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`); wp?.setFunded(false); }
     } catch { setState('Cannot check the chain', 'bad', 'The network did not answer. Retrying.'); }
   }
   const sendBack = `${location.origin}${location.pathname}#/pact/${code}`;
@@ -172,7 +169,7 @@ async function pactScreen(code) {
         h('p', { class: 'note' }, 'Send it as ONE payment of the exact amount. Anything else at this address is not counted as the fee. After funding, send the worker this same page link so they can accept:'),
         h('div', { class: 'addr' }, sendBack), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy link for the worker'); b.addEventListener('click', () => copy(sendBack, b)); return b; })()))
     : role === 'worker'
-      ? h('div', { class: 'panel' }, h('h2', {}, 'You are the worker'), h('p', { class: 'sub' }, 'When the organizer has funded the pact, the status shows Funded. Accepting the pact comes in the next build.'))
+      ? (wp = workerPanel({ pact: p, keyW: hexToBin(mineW.sk), onDone: () => refresh() })).el
       : h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.'));
   wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, h('p', { style: 'margin-top:14px' }, statusEl), detail,
     h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…'))), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));

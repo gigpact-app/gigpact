@@ -152,3 +152,4 @@ tools/
 _to_delete/
 dist/
 codes.tmp
+dist-check/

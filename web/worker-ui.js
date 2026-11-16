@@ -1,0 +1,70 @@
+// Worker panel: connect a wallet (QR), then accept the pact. All text through textContent.
+import { h, copy, qrSvg } from './dom.js';
+import { connect, current, disconnect, hasStoredWallet, qrFor } from './wallet.js';
+import { acceptPact } from './accept.js';
+import { provider } from './net.js';
+
+// pact: decoded pact. keyW: Uint8Array. Returns { el, setFunded(bool, accepted?) }.
+export function workerPanel({ pact, keyW, onDone }) {
+  const el = h('div', { class: 'panel' });
+  let funded = false, accepted = false, busy = false, wstate = 'idle', pairBox = null;
+  const err = h('p', { class: 'err', role: 'alert' });
+  const stepEl = h('p', { class: 'note' });
+  const stat = h('p', { class: 'sub' });
+  const connBtn = h('button', { class: 'btn small', type: 'button' }, 'Connect wallet');
+  const accBtn = h('button', { class: 'btn', type: 'button' }, 'Accept the pact');
+  const discBtn = h('button', { class: 'btn small ghost', type: 'button' }, 'Use another wallet');
+  const slot = h('div');
+
+  function render() {
+    const ready = wstate === 'ready';
+    stat.textContent = accepted ? 'You accepted this pact. The money is now locked for you until the event ends.'
+      : !funded ? 'Waiting for the organizer to fund the pact. You can connect your wallet meanwhile.'
+      : ready ? 'The pact is funded and your wallet is connected.' : 'The pact is funded. Connect your wallet to accept it.';
+    connBtn.hidden = ready || wstate === 'connecting' || accepted || !!pairBox;
+    discBtn.hidden = !(ready || wstate === 'connecting' || pairBox) || accepted;
+    accBtn.hidden = accepted; accBtn.disabled = !(funded && ready) || busy;
+    if (ready && pairBox) { pairBox.remove(); pairBox = null; }
+  }
+  function onWallet(s, me) {
+    wstate = s === 'pairing' ? (pairBox ? 'pairing' : 'idle') : s;
+    if (s === 'ready') stepEl.textContent = `Connected to ${me.mgr.walletName || 'your wallet'}.`;
+    else if (s === 'connecting') stepEl.textContent = 'Reconnecting to your wallet…';
+    else if (s === 'lost') stepEl.textContent = 'Connection to the wallet was lost. Trying again…';
+    render();
+  }
+  function showPairing(me) {
+    const uri = me.uri;
+    const copyBtn = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy connection link');
+    copyBtn.addEventListener('click', () => copy(uri, copyBtn));
+    pairBox = h('div', { class: 'pairing' },
+      h('p', { class: 'note' }, 'Open a WizardConnect wallet (for example Paytaca), choose "Connect" or scan, and scan this code:'),
+      h('div', { class: 'qr' }, qrSvg(qrFor(me.qrUri))),
+      h('div', { class: 'row' }, copyBtn, h('a', { class: 'btn small ghost', href: uri }, 'Open in wallet app')),
+      h('p', { class: 'note' }, 'The code only sets up an encrypted channel. Your wallet will ask you before anything is signed.'));
+    slot.replaceChildren(pairBox);
+  }
+  connBtn.addEventListener('click', () => {
+    err.textContent = ''; stepEl.textContent = 'Waiting for your wallet…'; wstate = 'pairing';
+    const me = connect(onWallet); showPairing(me); render();
+  });
+  discBtn.addEventListener('click', () => { disconnect(true); pairBox = null; slot.replaceChildren(); wstate = 'idle'; stepEl.textContent = ''; render(); });
+  accBtn.addEventListener('click', async () => {
+    const c = current(); if (!c || wstate !== 'ready' || !funded || busy) return;
+    busy = true; err.textContent = ''; render();
+    try {
+      const r = await acceptPact({ pact, keyW, mgr: c.mgr, provider, onStep: (t) => { stepEl.textContent = t; } });
+      accepted = true; stepEl.textContent = `Done. Transaction ${r.txid}`;
+      onDone?.(r);
+    } catch (x) { err.textContent = x?.message || String(x); stepEl.textContent = ''; }
+    busy = false; render();
+  });
+
+  el.append(h('h2', {}, 'You are the worker'), stat,
+    h('div', { class: 'row' }, connBtn, discBtn), slot, stepEl, err,
+    h('div', { class: 'row' }, accBtn),
+    h('p', { class: 'note' }, 'Accepting costs only the network fee (a few hundred satoshi), paid from your wallet. The pact money stays in the pact; no one can take it outside the pact rules.'));
+  if (hasStoredWallet()) { wstate = 'connecting'; connect(onWallet); }
+  render();
+  return { el, setFunded(f, acc) { funded = !!f; if (acc) accepted = true; render(); } };
+}
