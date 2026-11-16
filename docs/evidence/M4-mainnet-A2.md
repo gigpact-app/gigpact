@@ -22,4 +22,4 @@ Date: 2026-11-16 (Istanbul, about 18:30-18:45). Network: Bitcoin Cash mainnet.
 
 ## What this does NOT show
 - The same wallet owned both roles (worker and organizer refund address), so this does not show two separate people. The organizer's key was only used to fund the pact through the app, not to spend.
-- C1, C3, C4, A4, C2 and D1-D6 have not run on mainnet with a real wallet (C3 and C4 are the next tests).
+- C1, A4, C2 and D1-D6 had not run when this note was written. C3 and C4 ran later the same day, see M5 and M6.

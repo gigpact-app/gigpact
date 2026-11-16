@@ -11,8 +11,8 @@ This page compares the state at hackathon kick-off (14 November 2026) with the s
 | Web app | None | Create a request, fund it with a QR code, accept with a wallet, pay out or take the money back |
 | Mainnet | None | One full run of fund, accept, pay: three confirmed transactions (blocks 977,601 / 977,601 / 977,604) |
 | Tests | None | 228 tests (contract VM, library, web logic) plus regtest tests on a local BCHN node |
-| Paths run with a real wallet on mainnet | None | F1, A1, F2 and A3 only |
-| Paths not yet run with a real wallet | All | A2, A4, C1-C4, D1-D6 (regtest: A4, C1, C2, D1-D6; contract VM and software wallet only: A2, C3, C4) |
+| Paths run with a real wallet on mainnet | None | F1, A1, F2, A3, A2, C3 and C4 only |
+| Paths not yet run with a real wallet | All | A4, C1, C2, D1-D6 (regtest: A4, C1, C2, D1-D6) |
 
 ## What did not change
 
@@ -21,7 +21,7 @@ This page compares the state at hackathon kick-off (14 November 2026) with the s
 
 ## What is still open
 
-- Real-wallet runs of waive (A2) and collect after the waiting period (C1, planned about 19 Nov). Cancel (F2) and claim-after-event (A3) have each run once: see docs/evidence/M2-mainnet-F2.md and M3-mainnet-A3.md.
+- A real-wallet run of collect after the waiting period (C1, planned about 19 Nov). Cancel (F2), claim-after-event (A3), waive after accepting (A2), organizer pays at the claim stage (C3) and waive at the claim stage (C4) have run: see docs/evidence/M2 to M6.
 - Selene as a wallet is unverified.
 - Disputes use a discarded demo arbiter key and are closed in the UI.
 - No independent audit.

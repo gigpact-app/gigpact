@@ -28,4 +28,4 @@ Everything in this repository: the four CashScript contracts, the transaction li
 
 ## What is not claimed
 
-See the "What is tested" table in the README. In short: only the accept (F1), pay (A1), cancel (F2) and claim-after-event (A3) paths have run with a real wallet on mainnet (docs/evidence/M1 to M3).
+See the "What is tested" table in the README. In short: only the accept (F1), pay (A1), cancel (F2), claim-after-event (A3), waive after accepting (A2), organizer pays at the claim stage (C3) and waive at the claim stage (C4) paths have run with a real wallet on mainnet (docs/evidence/M1 to M6), by one tester playing both roles.

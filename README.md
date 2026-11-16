@@ -37,7 +37,7 @@ The happy path fund → accept → pay has run once on Bitcoin Cash mainnet with
 | Accept (F1) | [`e5d41659…fb39bb592b`](https://3xpl.com/bitcoin-cash/transaction/e5d41659ee5bba9393cf2b980a3b6dbd32f68910928a8902711b05fb39bb592b) | 977,601 |
 | Pay (A1) | [`f03fc1ef…495ba163`](https://3xpl.com/bitcoin-cash/transaction/f03fc1ef4ddd8b007c3a109f608b96e999d0b95631575e9a66258ece495ba163) | 977,604 |
 
-This is a test pact where the tester played both roles. It is shown so you can check the chain without a wallet. Details: [docs/evidence/M1-mainnet-F1.md](docs/evidence/M1-mainnet-F1.md), including an incident we kept in the record. A second real-wallet run, the cancel path (F2, block 977,609), is in [docs/evidence/M2-mainnet-F2.md](docs/evidence/M2-mainnet-F2.md). The claim after the event end (A3, block 977,619) is in [docs/evidence/M3-mainnet-A3.md](docs/evidence/M3-mainnet-A3.md).
+This is a test pact where the tester played both roles. It is shown so you can check the chain without a wallet. Details: [docs/evidence/M1-mainnet-F1.md](docs/evidence/M1-mainnet-F1.md), including an incident we kept in the record. A second real-wallet run, the cancel path (F2, block 977,609), is in [docs/evidence/M2-mainnet-F2.md](docs/evidence/M2-mainnet-F2.md). The claim after the event end (A3, block 977,619) is in [docs/evidence/M3-mainnet-A3.md](docs/evidence/M3-mainnet-A3.md). The worker waiving right after accepting (A2, block 977,635) is in [docs/evidence/M4-mainnet-A2.md](docs/evidence/M4-mainnet-A2.md), the organizer paying at the claim stage (C3, block 977,647) in [docs/evidence/M5-mainnet-C3.md](docs/evidence/M5-mainnet-C3.md) and the worker waiving at the claim stage (C4, block 977,648) in [docs/evidence/M6-mainnet-C4.md](docs/evidence/M6-mainnet-C4.md).
 
 ## What is tested, and at which level
 
@@ -45,10 +45,10 @@ Levels are kept separate on purpose.
 
 | Level | What it covers |
 |---|---|
-| Real wallet + mainnet | **F1 accept, A1 pay, F2 cancel and A3 claim only** (Paytaca via WizardConnect) |
+| Real wallet + mainnet | **F1 accept, A1 pay, F2 cancel, A3 claim, A2 waive, C3 organizer pays at the claim stage and C4 waive at the claim stage only** (Paytaca via WizardConnect; the tester played both roles with one wallet) |
 | Regtest (BCHN 29.2.0, local) | Timing, dust, wrong-signer and wrong-amount rejections, dispute payouts (G3 a/b/c), F1 and A1 with a software-wallet-signed sponsor input (G4-a) |
 | Software wallet / contract VM tests | All 16 paths build, sign and verify offline; wallet-misbehaviour cases are refused |
-| Not tested on a real wallet or mainnet | A2 (waive), A4, C1–C4 (C1, collect after 432 blocks, is planned for 19 Nov), D1–D6. Of these, regtest has run A4, C1, C2 and D1–D6; A2, C3 and C4 only ran in the contract VM and with a software wallet |
+| Not tested on a real wallet or mainnet | A4, C1, C2 (C1, collect after 432 blocks, is planned for 19 Nov), D1–D6. Of these, regtest has run A4, C1, C2 and D1–D6 |
 | Not verified | Selene as a wallet; token-carrying inputs; the dispute paths with a real arbiter (the app uses a discarded demo arbiter key, so disputes cannot be decided and are closed in the UI) |
 
 `npm test` runs 228 tests (contract VM, library, web logic). Regtest tests need a local BCHN node (`npm run test:regtest`). Full notes: [docs/G1-BOUNDARIES.md](docs/G1-BOUNDARIES.md).
