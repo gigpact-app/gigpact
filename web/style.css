@@ -67,3 +67,14 @@ ol.todo { padding-left:20px; color:var(--mute); } ol.todo li { margin:6px 0; } o
 .ex code { font-size:.85rem; overflow-wrap:anywhere; }
 .example .steps { margin:16px 0 0; }
 .ex .row { margin-top:auto; }
+
+.banner { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px 22px; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:0 0 14px 14px; background:#14130f; padding:14px 18px; margin:0 0 8px; font-size:.85rem; }
+.banner b { display:block; color:var(--mute); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; }
+.banner a { display:block; overflow-wrap:anywhere; }
+.banner .tok { grid-column:span 2; }
+.banner code { display:block; overflow-wrap:anywhere; font-size:.8rem; margin-bottom:8px; }
+.tagline { font-size:1.35rem; font-weight:700; color:var(--accent); letter-spacing:-.01em; margin:0 0 14px; }
+.vision { margin:36px 0 8px; }
+.vision .sub { color:var(--mute); margin:0; }
+.vision .steps { margin:16px 0 0; }
+@media (max-width:640px) { .banner .tok { grid-column:auto; } }

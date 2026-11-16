@@ -1,6 +1,6 @@
 // GigPact web app (skeleton). Plain DOM, no framework. All text from links goes in via textContent, never innerHTML.
 import { binToHex, hexToBin, sha256 } from '@bitauth/libauth';
-import { NET, MIN_FEE_SAT, MIN_LEAD_BLOCKS } from './config.js';
+import { NET, MIN_FEE_SAT, MIN_LEAD_BLOCKS, REPO_URL, PRESENTATION_URL, DECLARATION_URL, BEFORE_AFTER_URL, TOKEN_ADDR } from './config.js';
 import { UiError, newKey, pubOf, lockOfPk, parseAddress, addressOf, parseBch, fmtBch, encodePact, decodePact, pactId, chainFor, checkNumbers, cleanName } from './pact.js';
 import { provider, tip, utxosAt } from './net.js';
 import { h, copy } from './dom.js';
@@ -67,10 +67,33 @@ function realExample() {
     h('div', { class: 'steps' }, ...rows));
 }
 
+// Top banner of the home page (hackathon rule): presentation, source code, EMBER2026 donation address, pre-hackathon declaration.
+function banner() {
+  const ext = (href, text) => h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text);
+  const cp = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy address');
+  cp.addEventListener('click', () => copy(TOKEN_ADDR, cp));
+  return h('aside', { class: 'banner', 'aria-label': 'Hackathon links' },
+    h('div', {}, h('b', {}, 'Presentation'), ext(PRESENTATION_URL, 'BLAZE project slides')),
+    h('div', {}, h('b', {}, 'Source code'), ext(REPO_URL, 'github.com/gigpact-app/gigpact')),
+    h('div', { class: 'tok' }, h('b', {}, 'EMBER2026 donations (CashTokens address)'), h('code', {}, TOKEN_ADDR), cp),
+    h('div', {}, h('b', {}, 'Before the hackathon'), ext(DECLARATION_URL, 'Declaration: no product code before 14 Nov'), ext(BEFORE_AFTER_URL, 'Before / After')));
+}
+
+function vision() {
+  const card = (n, t, p) => h('div', { class: 'step' }, h('b', {}, n), h('h3', {}, t), h('p', {}, p));
+  return h('div', { class: 'vision' }, h('h2', {}, 'Where it goes'),
+    h('p', { class: 'sub' }, 'The first market is focused. The vision is every gig, everywhere.'),
+    h('div', { class: 'steps' },
+      card('NOW', 'Musicians and live-event workers', 'Performers, sound and light technicians, stage crew: booked for a date, paid after the show.'),
+      card('NEXT', 'Every event worker, worldwide', 'DJs, dancers, actors, hosts, photographers and more.'),
+      card('THEN', 'Any trade paid for a dated job', 'The same lock-before-work pact fits every sector. Only the label on the job changes.')));
+}
+
 // ---- screens ---------------------------------------------------------------------------------------------------
 function home() {
-  app.replaceChildren(h('div', { class: 'wrap' }, top(),
+  app.replaceChildren(h('div', { class: 'wrap' }, banner(), top(),
     h('h1', {}, 'Get paid for the gig. ', h('em', {}, 'Before you play.')),
+    h('p', { class: 'tagline' }, 'Built for musicians first. Made for every gig.'),
     h('p', { class: 'lead' }, 'The organizer locks your fee on Bitcoin Cash before the show. When it is done, the pact pays you. No chasing invoices, no ghosting.'),
     link('#/new', 'Create a pact for my gig', 'btn'),
     h('div', { class: 'steps' },
@@ -78,7 +101,8 @@ function home() {
       h('div', { class: 'step' }, h('b', {}, '2 · PLAY'), h('h3', {}, 'Do the show'), h('p', {}, 'You accept the pact and play. The money cannot be spent by anyone except along the pact’s rules.')),
       h('div', { class: 'step' }, h('b', {}, '3 · GET PAID'), h('h3', {}, 'The pact pays you'), h('p', {}, 'After the show you claim your fee. If the organizer stays silent, it pays out to you on its own.'))),
     realExample(),
-    h('p', { class: 'note' }, 'Prototype on Bitcoin Cash mainnet. You can create a pact, fund it, accept it with a WizardConnect wallet, and pay out or take the money back. Claim after the event, waive and the dispute steps are still being tested. Use small amounts.')));
+    vision(),
+    h('p', { class: 'note' }, 'Prototype on Bitcoin Cash mainnet. You can create a pact, fund it, accept it with a WizardConnect wallet, and pay out or take the money back. Claim after the event, waive and the dispute steps are still being tested. Use small amounts. So far it is built and tested for gigs only; the wider sectors are our vision.')));
 }
 
 function newPact() {

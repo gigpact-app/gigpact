@@ -10,6 +10,14 @@ Built solo for BCH BLAZE 2026 (DoraHacks). Prototype on Bitcoin Cash **mainnet**
 - Pre-hackathon declaration: [docs/DECLARATION.md](docs/DECLARATION.md)
 - Before / After: [docs/BEFORE-AFTER.md](docs/BEFORE-AFTER.md)
 
+## Vision
+
+**Built for musicians first. Made for every gig.**
+
+Today GigPact is built for musicians and live-event workers: performers, sound and light technicians, stage crew. The goal is global: every event worker (DJs, dancers, actors, hosts, photographers and more), and then any sector where work is booked for a date and paid on completion. The contract is the same everywhere: the fee is locked before the work, and it moves only along fixed rules. Only the label on the job changes.
+
+The first market is focused; the wider sectors are vision, not something this prototype has been tested on. The musician background of the author is a reason to understand the problem, not proof of market demand.
+
 ## The flow (one flow, four steps)
 
 1. **Request.** The worker enters the gig, the fee, the event end and a payout address, and gets a link for the organizer.
