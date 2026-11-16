@@ -1,7 +1,10 @@
 // Worker panel: connect a wallet (QR), then accept the pact. All text through textContent.
 import { h, copy, qrSvg } from './dom.js';
 import { connect, current, disconnect, hasStoredWallet, qrFor } from './wallet.js';
-import { acceptPact } from './accept.js';
+import { acceptPact, walletCoins } from './accept.js';
+import { WC_PATHS } from '../src/wizard.mjs';
+import { addressOf } from './pact.js';
+import { encodeLockingBytecodeP2pkh, hash160 } from '@bitauth/libauth';
 import { provider } from './net.js';
 
 // pact: decoded pact. keyW: Uint8Array. Returns { el, setFunded(bool, accepted?) }.
@@ -15,6 +18,7 @@ export function workerPanel({ pact, keyW, onDone }) {
   const accBtn = h('button', { class: 'btn', type: 'button' }, 'Accept the pact');
   const discBtn = h('button', { class: 'btn small ghost', type: 'button' }, 'Use another wallet');
   const slot = h('div');
+  const checkEl = h('p', { class: 'note' });
 
   function render() {
     const ready = wstate === 'ready';
@@ -28,10 +32,24 @@ export function workerPanel({ pact, keyW, onDone }) {
   }
   function onWallet(s, me) {
     wstate = s === 'pairing' ? (pairBox ? 'pairing' : 'idle') : s;
-    if (s === 'ready') stepEl.textContent = `Connected to ${me.mgr.walletName || 'your wallet'}.`;
+    if (s === 'ready') { stepEl.textContent = `Connected to ${me.mgr.walletName || 'your wallet'}.`; walletCheck(me); }
     else if (s === 'connecting') stepEl.textContent = 'Reconnecting to your wallet…';
     else if (s === 'lost') stepEl.textContent = 'Connection to the wallet was lost. Trying again…';
     render();
+  }
+  // Read-only check after connecting: the first receive address derived from the wallet's public keys, and the coins found at the
+  // first receive/change addresses. If these match what the wallet app shows, key derivation is right. Nothing is signed or sent.
+  async function walletCheck(me) {
+    try {
+      const derive = (name, i) => me.mgr.getPubkey(WC_PATHS[name], BigInt(i));
+      const pk = derive('receive', 0);
+      if (!pk) { checkEl.textContent = 'Wallet check: the wallet shared no receive keys.'; return; }
+      const first = addressOf(encodeLockingBytecodeP2pkh(hash160(pk)));
+      checkEl.textContent = `Wallet check: first receive address ${first}. Looking for coins…`;
+      const coins = await walletCoins({ derive, getUtxos: (a) => provider.getUtxos(a) });
+      const total = coins.reduce((a, c) => a + c.satoshis, 0n);
+      checkEl.textContent = `Wallet check: first receive address ${first}. Coins this wallet can sign for: ${coins.length} (${total} sat) in its first addresses. Compare the address with your wallet app.`;
+    } catch (x) { checkEl.textContent = `Wallet check failed: ${x?.message || x}`; }
   }
   function showPairing(me) {
     const uri = me.uri;
@@ -61,7 +79,7 @@ export function workerPanel({ pact, keyW, onDone }) {
   });
 
   el.append(h('h2', {}, 'You are the worker'), stat,
-    h('div', { class: 'row' }, connBtn, discBtn), slot, stepEl, err,
+    h('div', { class: 'row' }, connBtn, discBtn), slot, stepEl, checkEl, err,
     h('div', { class: 'row' }, accBtn),
     h('p', { class: 'note' }, 'Accepting costs only the network fee (a few hundred satoshi), paid from your wallet. The pact money stays in the pact; no one can take it outside the pact rules.'));
   if (hasStoredWallet()) { wstate = 'connecting'; connect(onWallet); }

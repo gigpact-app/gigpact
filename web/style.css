@@ -56,3 +56,5 @@ ol.todo { padding-left:20px; color:var(--mute); } ol.todo li { margin:6px 0; } o
 .pairing { margin: 14px 0; }
 .qr { background: #fff; padding: 10px; border-radius: 12px; display: inline-block; margin: 8px 0 12px; }
 .qr svg { display: block; max-width: 100%; height: auto; }
+
+.note { overflow-wrap: anywhere; }
