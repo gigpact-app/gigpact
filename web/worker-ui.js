@@ -3,7 +3,7 @@ import { h, copy, qrSvg } from './dom.js';
 import { connect, current, disconnect, hasStoredWallet, qrFor } from './wallet.js';
 import { acceptPact, walletCoins } from './accept.js';
 import { WC_PATHS } from '../src/wizard.mjs';
-import { addressOf } from './pact.js';
+import { addressOf, parseAddress } from './pact.js';
 import { encodeLockingBytecodeP2pkh, hash160 } from '@bitauth/libauth';
 import { provider } from './net.js';
 
@@ -19,6 +19,7 @@ export function workerPanel({ pact, keyW, onDone }) {
   const discBtn = h('button', { class: 'btn small ghost', type: 'button' }, 'Use another wallet');
   const slot = h('div');
   const checkEl = h('p', { class: 'note' });
+  const finderBox = h('div');
 
   function render() {
     const ready = wstate === 'ready';
@@ -29,6 +30,8 @@ export function workerPanel({ pact, keyW, onDone }) {
     discBtn.hidden = !(ready || wstate === 'connecting' || pairBox) || accepted;
     accBtn.hidden = accepted; accBtn.disabled = !(funded && ready) || busy;
     if (ready && pairBox) { pairBox.remove(); pairBox = null; }
+    if (ready && !finderBox.firstChild) finderBox.append(finder());
+    if (!ready) finderBox.replaceChildren();
   }
   function onWallet(s, me) {
     wstate = s === 'pairing' ? (pairBox ? 'pairing' : 'idle') : s;
@@ -51,6 +54,27 @@ export function workerPanel({ pact, keyW, onDone }) {
       checkEl.textContent = `Wallet check: first receive address ${first}. Plain coins this wallet can sign for: ${coins.length} (${total} sat). Looked at ${coins.scanned} addresses; ${coins.failed} lookups failed; ${coins.tokenOutputs} token outputs skipped. Compare the address with your wallet app.`;
     } catch (x) { checkEl.textContent = `Wallet check failed: ${x?.message || x}`; }
   }
+  // Diagnostic: find which shared key (path/index) belongs to an address the user copied from their wallet app. Pure computation.
+  function finder() {
+    const input = h('input', { placeholder: 'bitcoincash:q… (copy it from your wallet app)' });
+    const out = h('p', { class: 'note' });
+    const btn = h('button', { class: 'btn small ghost', type: 'button' }, 'Find this address in the wallet keys');
+    btn.addEventListener('click', () => {
+      out.textContent = '';
+      const me = current(); if (!me || wstate !== 'ready') { out.textContent = 'Connect the wallet first.'; return; }
+      let lock; try { lock = parseAddress(input.value); } catch (x) { out.textContent = x.message; return; }
+      const MAX = 300;
+      for (const name of ['receive', 'change', 'defi']) {
+        for (let i = 0; i < MAX; i++) {
+          const pk = me.mgr.getPubkey(WC_PATHS[name], BigInt(i));
+          if (pk && same(encodeLockingBytecodeP2pkh(hash160(pk)), lock)) { out.textContent = `Found: ${name} index ${i}.`; return; }
+        }
+      }
+      out.textContent = `Not found in the first ${MAX} indexes of receive, change and defi. The wallet shares keys for: ${(me.mgr.getSessionPaths?.() ?? []).map((p) => p.name ?? p.pathName ?? '?').join(', ') || 'unknown paths'}.`;
+    });
+    return h('div', { class: 'row' , style: 'flex-direction:column;align-items:stretch;gap:8px' }, input, btn, out);
+  }
+  const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   function showPairing(me) {
     const uri = me.uri;
     const copyBtn = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy connection link');
@@ -79,7 +103,7 @@ export function workerPanel({ pact, keyW, onDone }) {
   });
 
   el.append(h('h2', {}, 'You are the worker'), stat,
-    h('div', { class: 'row' }, connBtn, discBtn), slot, stepEl, checkEl, err,
+    h('div', { class: 'row' }, connBtn, discBtn), slot, stepEl, checkEl, finderBox, err,
     h('div', { class: 'row' }, accBtn),
     h('p', { class: 'note' }, 'Accepting costs only the network fee (a few hundred satoshi), paid from your wallet. The pact money stays in the pact; no one can take it outside the pact rules.'));
   if (hasStoredWallet()) { wstate = 'connecting'; connect(onWallet); }
