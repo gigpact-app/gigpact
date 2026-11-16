@@ -4,7 +4,7 @@
 // Evidence level: R-VM / software wallet (see test/accept.test.mjs). No real wallet has run this yet.
 import { SignatureTemplate } from 'cashscript';
 import { encodeLockingBytecodeP2pkh, hash160, lockingBytecodeToCashAddress } from '@bitauth/libauth';
-import { planSpend, changeFloor } from '../src/spend.mjs';
+import { planSpend, changeFloor, PATHS } from '../src/spend.mjs';
 import { declareFunding, newJob } from '../src/k17.mjs';
 import { prepareSign, verifySigned, findSponsorPath, WC_PATHS } from '../src/wizard.mjs';
 import { UiError, chainFor, addressOf } from './pact.js';
@@ -123,4 +123,39 @@ export async function cancelPact({ pact, keyV, mgr, provider, onStep = () => {} 
   const sent = await provider.sendRawTransaction(v.hex);
   if (typeof sent === 'string' && sent.toLowerCase() !== v.txid) throw new UiError(`The network reported another transaction id (${sent}) than the one we signed (${v.txid}). Check the explorer before trying again.`);
   return { txid: v.txid, fee: v.fee, size: v.size, hex: v.hex, returned: u.satoshis, refundTo: addressOf(pact.lockV), remaining: held.length - 1 };
+}
+
+// Accepted-stage exits: A1 pay (organizer, key V), A2 waive (worker, key W), A3 claim (worker, key W, only once the chain has reached tEnd).
+// Exactly one output of exactly F must sit at the contract address of that stage. The connected wallet only adds a coin for the fee.
+export const SETTLE_TEXT = {
+  A1: (p, F) => `GigPact: pay the worker. ${F} sat go from the pact to the worker's payout address "${p.name}". Only the network fee is paid from your wallet.`,
+  A2: (p, F) => `GigPact: waive. ${F} sat go back from the pact to the organizer's refund address "${p.name}". Only the network fee is paid from your wallet.`,
+  A3: (p, F) => `GigPact: claim the pay for "${p.name}". ${F} sat move to the next stage of the pact. Only the network fee is paid from your wallet.`,
+};
+export async function settlePact({ pact, path, key, mgr, provider, onStep = () => {} }) {
+  if (!Object.hasOwn(SETTLE_TEXT, path)) throw new UiError('This action is not available yet.');
+  const P = PATHS[path];
+  const chain = chainFor(pact, provider);
+  const F = chain.params.F;
+  onStep('Checking the pact on the chain…');
+  const held = await provider.getUtxos(chain.addresses[P.c]);
+  if (!(held.length === 1 && held[0].satoshis === F && !held[0].token)) throw new UiError(`Expected exactly one output of ${F} sat at the ${P.c} address, found ${held.length}${held.length ? ` (${held.map((u) => u.satoshis).join(', ')} sat)` : ''}.`);
+  const ctx = {};
+  if (P.cltv) {
+    const tip = BigInt(await provider.getBlockHeight());
+    if (tip < chain.params.tEnd) throw new UiError(`Not yet: the event ends at block ${chain.params.tEnd}, the chain is at block ${tip}.`);
+    ctx.tipHeight = tip;
+  }
+  const utxo = { txid: held[0].txid, vout: held[0].vout, satoshis: held[0].satoshis, lockingBytecode: Uint8Array.from(chain.locks[P.c]) };
+  const { derive, changeLock, sponsors } = await findSponsors({ mgr, provider, onStep });
+  const plan = planSpend({ chain, path, utxo, sponsors, feeRate: 1, ctx });
+  const sponsorPaths = plan.sponsors.map((s) => findSponsorPath(s.lockingBytecode, derive));
+  const { request, expected } = prepareSign(plan, { provider, keys: { [P.signer]: key }, SignatureTemplate, changeLock, sponsorPaths, userPrompt: SETTLE_TEXT[path](pact, F) });
+  onStep('Waiting for your wallet to approve…');
+  const response = await mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths });
+  const v = verifySigned(expected, response, { derive });
+  onStep('Sending to the network…');
+  const sent = await provider.sendRawTransaction(v.hex);
+  if (typeof sent === 'string' && sent.toLowerCase() !== v.txid) throw new UiError(`The network reported another transaction id (${sent}) than the one we signed (${v.txid}). Check the explorer before trying again.`);
+  return { txid: v.txid, fee: v.fee, size: v.size, hex: v.hex, path, to: addressOf(plan.outs[0].lock) };
 }

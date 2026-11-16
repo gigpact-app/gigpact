@@ -6,6 +6,7 @@ import { provider, tip, utxosAt } from './net.js';
 import { h, copy } from './dom.js';
 import { workerPanel } from './worker-ui.js';
 import { cancelPanel } from './cancel-ui.js';
+import { settlePanel } from './settle-ui.js';
 import { qrSvg } from './dom.js';
 import { qrFor } from './wallet.js';
 
@@ -158,7 +159,11 @@ async function pactScreen(code) {
   const payBox = h('div', { class: 'panel', hidden: true },
     h('h2', {}, 'Pay this pact'), h('p', { class: 'sub' }, `Scan with a wallet app to pay exactly ${fmtBch(p.F)} BCH in one payment. Check the amount in the wallet before you confirm.`),
     h('div', { class: 'qr' }, qrSvg(qrFor(payUri))), h('div', { class: 'addr' }, fundAddr), h('div', { class: 'row' }, payCopy));
-  let wp = null, cp = null;
+  // Remember (in this browser) that this pact was settled, so a reload does not look like "waiting for funding".
+  const doneKey = `gigpact.done.${pactId(code)}`;
+  const doneMark = () => { try { return JSON.parse(localStorage.getItem(doneKey) || 'null'); } catch { return null; } };
+  const markDone = (r) => { try { localStorage.setItem(doneKey, JSON.stringify({ path: r.path, txid: r.txid, to: r.to })); } catch { /* display only */ } };
+  let wp = null, cp = null, sp = null;
   async function refresh() {
     try {
       payBox.hidden = true;
@@ -166,10 +171,12 @@ async function pactScreen(code) {
       const [us, acc, later] = await Promise.all([utxosAt(A.funded), utxosAt(A.accepted), Promise.all([A.requested, A.d100, A.d50].map((a) => utxosAt(a)))]);
       cp?.setHeld(us);
       const accOk = acc.filter((u) => u.satoshis === p.F);
+      sp?.setAccepted(accOk.length === 1 && acc.length === 1 && us.length === 0);
       if (accOk.length === 1 && acc.length === 1 && us.length === 0) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${accOk[0].txid}:${accOk[0].vout}`); wp?.setFunded(false, true); return; }
       if (acc.length || later.some((x) => x.length)) { setState('Past the funded stage', 'warn', 'This pact has moved on. Later stages are not shown in this build yet.'); wp?.setFunded(false); return; }
       const exact = us.filter((u) => u.satoshis === p.F);
       if (exact.length === 1 && us.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${exact[0].txid}:${exact[0].vout}`); wp?.setFunded(true); }
+      else if (us.length === 0 && doneMark()) { const d = doneMark(); setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true); return; }
       else if (us.length === 0) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); payBox.hidden = false; return; }
       else { setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`); wp?.setFunded(false); }
     } catch { setState('Cannot check the chain', 'bad', 'The network did not answer. Retrying.'); }
@@ -208,8 +215,9 @@ async function pactScreen(code) {
     : role === 'worker'
       ? (wp = workerPanel({ pact: p, keyW: hexToBin(mineW.sk), onDone: () => refresh() })).el
       : h('div', {}, h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.')), restoreBox());
+  if (role !== 'viewer') sp = settlePanel({ pact: p, role, key: hexToBin((role === 'organizer' ? mineV : mineW).sk), onDone: (r) => { markDone(r); refresh(); } });
   if (role === 'organizer') cp = cancelPanel({ pact: p, keyV: hexToBin(mineV.sk), onDone: () => refresh() });
-  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(cp ? [keyBox(), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
+  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el] : []), ...(cp ? [keyBox(), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
     h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…')), payBox), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
   fillEta(); refresh(); timers.push(setInterval(refresh, 20000));
 }
