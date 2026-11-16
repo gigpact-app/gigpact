@@ -46,7 +46,7 @@ function pass(p, { state, stateClass, eta, seed }) {
     h('div', { style: 'margin-top:12px' }, h('span', { class: `state ${stateClass ?? ''}` }, state)));
 }
 async function etaText(tEnd) {
-  try { const t = await tip(); const ms = Date.now() + (tEnd - t) * 600_000; return `${new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (block ${tEnd})`; } catch { return `block ${tEnd}`; }
+  try { const t = await tip(); if (tEnd <= t) return `block ${tEnd} (already reached)`; const ms = Date.now() + (tEnd - t) * 600_000; return `${new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (block ${tEnd})`; } catch { return `block ${tEnd}`; }
 }
 
 // A real run on mainnet (16 Nov 2026, test amount), for readers without a wallet. Not simulated.
