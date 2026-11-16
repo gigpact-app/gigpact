@@ -52,7 +52,7 @@ async function etaText(tEnd) {
 // A real run on mainnet (16 Nov 2026, test amount), for readers without a wallet. Not simulated.
 const EXAMPLE = [
   { n: '1 · Locked', what: 'The organizer locked 10,000 sat (0.0001 BCH) into the pact.', tx: '6e715ef3ff155358cdcc1283bd5eeb194b9c6a51e4c679477fbeb205ccc86b4a' },
-  { n: '2 · Accepted', what: 'The worker accepted with a wallet signature. The money stayed in the pact.', tx: 'e5d41659ee5bba9393cf2b980a3b6dbd32f68910928a8902711b05fb39bb592b' },
+  { n: '2 · Accepted', what: 'The worker accepted the pact from a wallet. The money stayed in the pact.', tx: 'e5d41659ee5bba9393cf2b980a3b6dbd32f68910928a8902711b05fb39bb592b' },
   { n: '3 · Paid', what: 'The organizer released the pact and the worker was paid.', tx: 'f03fc1ef4ddd8b007c3a109f608b96e999d0b95631575e9a66258ece495ba163' },
 ];
 function realExample() {
@@ -63,7 +63,7 @@ function realExample() {
     return h('div', { class: 'ex' }, h('b', {}, e.n), h('p', {}, e.what), h('code', {}, `${e.tx.slice(0, 10)}…${e.tx.slice(-8)}`), h('div', { class: 'row' }, a, cp));
   });
   return h('div', { class: 'example' }, h('h2', {}, 'See it on the chain'),
-    h('p', { class: 'sub' }, 'This is a real run of the prototype on Bitcoin Cash mainnet, 16 November 2026. These are three real transactions with a tiny test amount, not a simulation. You can check each one in a block explorer.'),
+    h('p', { class: 'sub' }, 'This is a real run of the prototype on Bitcoin Cash mainnet, 16 November 2026. These are three real transactions with a tiny test amount, not a simulation. One tester played both roles, worker and organizer, with one wallet. You can check each one in a block explorer.'),
     h('div', { class: 'steps' }, ...rows));
 }
 
@@ -137,7 +137,7 @@ function newPact() {
       const code = encodePact(p), url = `${location.origin}${location.pathname}#/pact/${code}`;
       out.replaceChildren(h('div', { class: 'panel', style: 'margin-top:22px' },
         h('h2', {}, 'Send this link to the organizer'),
-        h('p', { class: 'sub' }, 'They open it, enter their refund address, and get the address to fund. Nothing is locked until they pay.'),
+        h('p', { class: 'sub' }, 'They open it, enter their refund address, and get the address to fund. Nothing is locked until they pay. After they fund, they send you back a different link. Open that one to accept.'),
         h('div', { class: 'addr' }, url),
         h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small', type: 'button' }, 'Copy link'); b.addEventListener('click', () => copy(url, b)); return b; })(), link(`#/pact/${code}`, 'Open it here', 'btn small ghost')),
         h('p', { class: 'note' }, 'Your signing key for this pact is stored in this browser only. Do not clear this site’s data until the pact is settled. Key backup is not built yet.')));
@@ -173,12 +173,26 @@ async function pactScreen(code) {
       const own = `${location.origin}${location.pathname}#/pact/${code}`;
       wrap.append(h('div', { class: 'grid2' }, h('div', { class: 'panel' }, h('h2', {}, 'This is your request link'),
         h('p', { class: 'sub' }, 'Send it to the organizer. They open it, enter a refund address and get the address to fund. Nothing is locked until they pay.'),
-        h('div', { class: 'addr' }, own), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small', type: 'button' }, 'Copy link'); b.addEventListener('click', () => copy(own, b)); return b; })())),
-        pass(p, { state: 'Waiting for the organizer', stateClass: 'warn', seed: code })));
+        h('div', { class: 'addr' }, own), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small', type: 'button' }, 'Copy link'); b.addEventListener('click', () => copy(own, b)); return b; })()),
+        h('p', { class: 'note' }, 'This link never changes. After the organizer funds the pact, they send you a different, longer link. Open that one to accept, or paste it below.'),
+        (() => {
+          const input = h('input', { placeholder: 'Paste the organizer’s link here', autocomplete: 'off', spellcheck: 'false' }), msg = h('p', { class: 'err', role: 'alert' });
+          const go = h('button', { class: 'btn small', type: 'button' }, 'Open the pact');
+          go.addEventListener('click', () => {
+            msg.textContent = '';
+            const v = input.value.trim(), i = v.indexOf('#/pact/'), c = i >= 0 ? v.slice(i + 7) : v;
+            let q; try { q = decodePact(c); } catch { msg.textContent = 'That is not a pact link.'; return; }
+            if (!q.pkV) { msg.textContent = 'That is still your own request link. Wait for the organizer’s reply link.'; return; }
+            location.hash = `#/pact/${c}`;
+          });
+          return h('div', {}, input, msg, h('div', { class: 'row' }, go));
+        })()),
+        pass(p, { state: 'Waiting for the organizer’s reply', stateClass: 'warn', seed: code })));
       fillEta();
       return;
     }
-    const id = pactId(code), saved = store.find(`req:${id}`);
+    const id = pactId(code), reqKey = `gigpact.req.${id}`;
+    try { const again = localStorage.getItem(reqKey); if (again) { location.hash = `#/pact/${again}`; return; } } catch { /* first time */ }
     const err = h('p', { class: 'err', role: 'alert' });
     const addr = h('input', { id: 'refund', placeholder: `${NET === 'mainnet' ? 'bitcoincash:q…' : 'bchtest:q…'}`, autocomplete: 'off', spellcheck: 'false' });
     const btn = h('button', { class: 'btn', type: 'submit' }, 'Get the funding address');
@@ -196,6 +210,7 @@ async function pactScreen(code) {
         const full = { ...p, pkV, lockV };
         chainFor(full, provider); // throws if the terms are not allowed
         if (!store.put(binToHex(pkV), binToHex(sk), { role: 'V', th: termsOf(full, true) })) throw new UiError('This browser would not let the app save your signing key. Allow site storage and try again.');
+        try { localStorage.setItem(reqKey, encodePact(full)); } catch { /* display only */ }
         location.hash = `#/pact/${encodePact(full)}`;
       } catch (x) { err.textContent = x instanceof UiError ? x.message : `This cannot be created: ${x.message}`; }
     });
@@ -209,7 +224,7 @@ async function pactScreen(code) {
   const fundAddr = chain.addresses.funded;
   const role = mineV ? 'organizer' : mineW ? 'worker' : 'viewer';
   const statusEl = h('span', { class: 'state warn' }, 'Checking the chain…'), detail = h('p', { class: 'sub' });
-  const setState = (txt, cls, d) => { statusEl.textContent = txt; statusEl.className = `state ${cls}`; detail.textContent = d ?? ''; const c = document.querySelector('.pass .state'); if (c) { c.textContent = txt; c.className = `state ${cls}`; } };
+  const setState = (txt, cls, d) => { statusEl.textContent = txt; statusEl.className = `state ${cls}`; detail.textContent = d ?? ''; const c = wrap.querySelector('.pass .state'); if (c) { c.textContent = txt; c.className = `state ${cls}`; } };
   // Pay box: BIP21-style URI with the exact amount, as QR and as copyable text. Only shown while nothing has arrived yet.
   const payUri = `${fundAddr}?amount=${fmtBch(p.F)}`;
   const payCopy = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy funding address');
