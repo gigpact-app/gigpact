@@ -131,7 +131,17 @@ export const SETTLE_TEXT = {
   A1: (p, F) => `GigPact: pay the worker. ${F} sat go from the pact to the worker's payout address "${p.name}". Only the network fee is paid from your wallet.`,
   A2: (p, F) => `GigPact: waive. ${F} sat go back from the pact to the organizer's refund address "${p.name}". Only the network fee is paid from your wallet.`,
   A3: (p, F) => `GigPact: claim the pay for "${p.name}". ${F} sat move to the next stage of the pact. Only the network fee is paid from your wallet.`,
+  C1: (p, F) => `GigPact: collect the pay. ${F} sat go from the pact to the worker's payout address "${p.name}". Only the network fee is paid from your wallet.`,
+  C3: (p, F) => `GigPact: pay the worker. ${F} sat go from the pact to the worker's payout address "${p.name}". Only the network fee is paid from your wallet.`,
+  C4: (p, F) => `GigPact: waive. ${F} sat go back from the pact to the organizer's refund address "${p.name}". Only the network fee is paid from your wallet.`,
 };
+// Number of confirmations of a transaction (needed for the relative time lock of C1). A provider may supply its own lookup (tests).
+export async function confirmationsOf(provider, txid) {
+  if (typeof provider.confirmationsOf === 'function') return BigInt(await provider.confirmationsOf(txid));
+  const r = await provider.performRequest('blockchain.transaction.get', txid, true);
+  const n = Number(r?.confirmations ?? 0);
+  return BigInt(Number.isFinite(n) && n > 0 ? n : 0);
+}
 export async function settlePact({ pact, path, key, mgr, provider, onStep = () => {} }) {
   if (!Object.hasOwn(SETTLE_TEXT, path)) throw new UiError('This action is not available yet.');
   const P = PATHS[path];
@@ -146,11 +156,16 @@ export async function settlePact({ pact, path, key, mgr, provider, onStep = () =
     if (tip < chain.params.tEnd) throw new UiError(`Not yet: the event ends at block ${chain.params.tEnd}, the chain is at block ${tip}.`);
     ctx.tipHeight = tip;
   }
+  if (P.csv) {
+    const N = chain.params[P.csv], have = await confirmationsOf(provider, held[0].txid);
+    if (have < N) throw new UiError(`Not yet: the money has to wait ${N} blocks at this stage (about ${Math.round(Number(N) / 144)} days); it has waited ${have} so far.`);
+    ctx.confirmations = have;
+  }
   const utxo = { txid: held[0].txid, vout: held[0].vout, satoshis: held[0].satoshis, lockingBytecode: Uint8Array.from(chain.locks[P.c]) };
   const { derive, changeLock, sponsors } = await findSponsors({ mgr, provider, onStep });
   const plan = planSpend({ chain, path, utxo, sponsors, feeRate: 1, ctx });
   const sponsorPaths = plan.sponsors.map((s) => findSponsorPath(s.lockingBytecode, derive));
-  const { request, expected } = prepareSign(plan, { provider, keys: { [P.signer]: key }, SignatureTemplate, changeLock, sponsorPaths, userPrompt: SETTLE_TEXT[path](pact, F) });
+  const { request, expected } = prepareSign(plan, { provider, keys: P.signer ? { [P.signer]: key } : {}, SignatureTemplate, changeLock, sponsorPaths, userPrompt: SETTLE_TEXT[path](pact, F) });
   onStep('Waiting for your wallet to approve…');
   const response = await mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths });
   const v = verifySigned(expected, response, { derive });

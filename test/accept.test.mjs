@@ -157,3 +157,23 @@ test('settle: A3 claim waits for tEnd; wrong amount, nothing there, wrong key an
   n = net({ coins: coins(100000n) }); await assert.rejects(settlePact({ pact, path: 'A1', key: kW, mgr: mgr(), provider: n.p })); assert.equal(n.sent.length, 0);
   await bad(settlePact({ pact, path: 'A4', key: kV, mgr: mgr(), provider: n.p }), /not available/);
 });
+
+test('settle (claim stage): C1 collect needs 432 confirmations and sets the relative lock; C3 (V) and C4 (W) need none; refusals broadcast nothing', async () => {
+  const req = (sat = 100000n) => ({ [chain.addresses.requested]: [{ txid: T(73), vout: 0, satoshis: sat }], [walletAddr('receive', 3)]: [{ txid: T(22), vout: 1, satoshis: 30000n }] });
+  let n = net({ coins: req() }); n.p.confirmationsOf = async () => 431;
+  await bad(settlePact({ pact, path: 'C1', key: kW, mgr: mgr(), provider: n.p }), /Not yet/); assert.equal(n.sent.length, 0);
+  n = net({ coins: req() }); n.p.confirmationsOf = async () => 432;
+  const r = await settlePact({ pact, path: 'C1', key: kW, mgr: mgr(), provider: n.p });
+  let tx = decodeTransactionBch(hexToBin(n.sent[0]));
+  assert.equal(r.path, 'C1'); assert.equal(tx.inputs[0].sequenceNumber, 432); // block-based relative lock of 432
+  assert.equal(tx.outputs[0].valueSatoshis, 100000n); assert.equal(binToHex(tx.outputs[0].lockingBytecode), binToHex(pact.lockW));
+  assert.equal(binToHex(tx.inputs[0].outpointTransactionHash), T(73));
+  for (const [path, key, lock] of [['C3', kV, pact.lockW], ['C4', kW, pact.lockV]]) {
+    n = net({ coins: req() });
+    await settlePact({ pact, path, key, mgr: mgr(), provider: n.p });
+    tx = decodeTransactionBch(hexToBin(n.sent[0]));
+    assert.equal(tx.outputs[0].valueSatoshis, 100000n); assert.equal(binToHex(tx.outputs[0].lockingBytecode), binToHex(lock));
+  }
+  n = net({ coins: req(99999n) }); n.p.confirmationsOf = async () => 500; await bad(settlePact({ pact, path: 'C1', key: kW, mgr: mgr(), provider: n.p }), /exactly one output of 100000/); assert.equal(n.sent.length, 0);
+  n = net({ coins: req() }); await assert.rejects(settlePact({ pact, path: 'C3', key: kW, mgr: mgr(), provider: n.p })); assert.equal(n.sent.length, 0); // W cannot sign the V path
+});

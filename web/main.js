@@ -99,7 +99,7 @@ function home() {
     h('div', { class: 'steps' },
       h('div', { class: 'step' }, h('b', {}, '1 · LOCK'), h('h3', {}, 'Agree the fee'), h('p', {}, 'You set the fee and the event end. The organizer locks the money into your pact before the gig.')),
       h('div', { class: 'step' }, h('b', {}, '2 · PLAY'), h('h3', {}, 'Do the show'), h('p', {}, 'You accept the pact and play. The money cannot be spent by anyone except along the pact’s rules.')),
-      h('div', { class: 'step' }, h('b', {}, '3 · GET PAID'), h('h3', {}, 'The pact pays you'), h('p', {}, 'After the show you claim your fee. If the organizer stays silent, it pays out to you on its own.'))),
+      h('div', { class: 'step' }, h('b', {}, '3 · GET PAID'), h('h3', {}, 'The pact pays you'), h('p', {}, 'After the show you claim your fee. If the organizer does not object within about 3 days, you collect it.'))),
     realExample(),
     vision(),
     h('p', { class: 'note' }, 'Prototype on Bitcoin Cash mainnet. You can create a pact, fund it, accept it with a WizardConnect wallet, and pay out or take the money back. Claim after the event, waive and the dispute steps are still being tested. Use small amounts. So far it is built and tested for gigs only; the wider sectors are our vision.')));
@@ -206,7 +206,7 @@ async function pactScreen(code) {
   const doneKey = `gigpact.done.${pactId(code)}`;
   const doneMark = () => { try { return JSON.parse(localStorage.getItem(doneKey) || 'null'); } catch { return null; } };
   const markDone = (r) => { try { localStorage.setItem(doneKey, JSON.stringify({ path: r.path, txid: r.txid, to: r.to })); } catch { /* display only */ } };
-  let wp = null, cp = null, sp = null;
+  let wp = null, cp = null, sp = null, sp2 = null;
   async function refresh() {
     try {
       payBox.hidden = true;
@@ -215,6 +215,10 @@ async function pactScreen(code) {
       cp?.setHeld(us);
       const accOk = acc.filter((u) => u.satoshis === p.F);
       sp?.setAccepted(accOk.length === 1 && acc.length === 1 && us.length === 0);
+      const req = later[0], reqOk = req.filter((u) => u.satoshis === p.F && !u.token);
+      const claimed = reqOk.length === 1 && req.length === 1 && us.length === 0 && acc.length === 0 && later[1].length === 0 && later[2].length === 0;
+      sp2?.setAccepted(claimed);
+      if (claimed) { setState('Claimed', 'ok', `The worker claimed the pay after the event. The money waits at the claim stage (${reqOk[0].txid}:${reqOk[0].vout}). After 432 blocks (about 3 days) the worker can collect it.`); wp?.setFunded(false, true); return; }
       if (accOk.length === 1 && acc.length === 1 && us.length === 0) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${accOk[0].txid}:${accOk[0].vout}`); wp?.setFunded(false, true); return; }
       if (acc.length || later.some((x) => x.length)) { setState('Past the funded stage', 'warn', 'This pact has moved on. Later stages are not shown in this build yet.'); wp?.setFunded(false); return; }
       const exact = us.filter((u) => u.satoshis === p.F);
@@ -258,9 +262,13 @@ async function pactScreen(code) {
     : role === 'worker'
       ? (wp = workerPanel({ pact: p, keyW: hexToBin(mineW.sk), onDone: () => refresh() })).el
       : h('div', {}, h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.')), restoreBox());
-  if (role !== 'viewer') sp = settlePanel({ pact: p, role, key: hexToBin((role === 'organizer' ? mineV : mineW).sk), onDone: (r) => { markDone(r); refresh(); } });
+  if (role !== 'viewer') {
+    const rk = hexToBin((role === 'organizer' ? mineV : mineW).sk);
+    sp = settlePanel({ pact: p, role, key: rk, onDone: (r) => { markDone(r); refresh(); } });
+    sp2 = settlePanel({ pact: p, role, stage: 'requested', key: rk, onDone: (r) => { markDone(r); refresh(); } });
+  }
   if (role === 'organizer') cp = cancelPanel({ pact: p, keyV: hexToBin(mineV.sk), onDone: () => refresh() });
-  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el] : []), ...(cp ? [keyBox(), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
+  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el, sp2.el] : []), ...(cp ? [keyBox(), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
     h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…')), payBox), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
   fillEta(); refresh(); timers.push(setInterval(refresh, 20000));
 }

@@ -23,7 +23,7 @@ The first market is focused; the wider sectors are vision, not something this pr
 1. **Request.** The worker enters the gig, the fee, the event end and a payout address, and gets a link for the organizer.
 2. **Fund.** The organizer opens the link, enters a refund address and sends exactly the fee to the pact's funding address from any wallet. The money now sits in a contract.
 3. **Accept.** The worker connects a wallet with WizardConnect and presses *Accept*. The fee is now bound to the worker. Before acceptance the organizer can take the money back.
-4. **Settle.** After the gig the organizer presses *Pay the worker*. (By design the worker can also claim after the event end if the organizer stays silent; see the limits below.)
+4. **Settle.** After the gig the organizer presses *Pay the worker*. If the organizer stays silent, the worker can claim after the event end and collect after a waiting period of 432 blocks (about 3 days); see the limits below.
 
 The contract has 16 spend paths (claim after the event, waive, disputes and more). The web app shows only what the person has to do next.
 
@@ -58,7 +58,7 @@ Levels are kept separate on purpose.
 - Funding is a plain send from any wallet. Sending a wrong amount cannot be accepted by the contract (it takes exactly the fee) and the money can only be taken back with the organizer's key.
 - The organizer's key lives in the browser (localStorage). The app offers a backup box; if you lose the key and the browser data, the funds at that stage are locked. One test pact on mainnet is locked this way (30,000 sat, see the evidence file).
 - The "Settled" display is a marker kept per browser. Another browser sees the chain state, not the marker.
-- The description "if the organizer stays silent, the worker can claim after the event" is the contract design (A3). It passed regtest and software tests, but has not run on mainnet.
+- The silent-organizer path (claim after the event end, then collect after 432 blocks) is the contract design (A3, then C1). It passed regtest and software tests; see the evidence notes for any real-wallet run on mainnet.
 - No audit. Contract sources are frozen for the hackathon.
 
 ## Try it
