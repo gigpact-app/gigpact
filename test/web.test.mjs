@@ -89,3 +89,18 @@ test('links: only a plain P2PKH lock is accepted; bidi controls are stripped fro
   const V = mk(), full = { ...base, pkV: V.pk, lockV: V.lock };
   assert.notEqual(termsOf(full, true), termsOf({ ...full, lockV: mk().lock }, true));
 });
+
+test('wallet box: a stored session the wallet never answers ends in an explanation, not "Reconnecting…" for ever', async () => {
+  globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+  const { reconnectNote } = await import('../web/wallet.js');
+  const el = { textContent: '' };
+  reconnectNote(el, 20);
+  assert.match(el.textContent, /^Reconnecting/);
+  await new Promise((r) => setTimeout(r, 60));
+  assert.match(el.textContent, /not answering/);
+  assert.match(el.textContent, /Use another wallet/);
+  // a connection that came up in the meantime must not be overwritten
+  const ok = { textContent: '' }; reconnectNote(ok, 20); ok.textContent = 'Connected to Paytaca.';
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(ok.textContent, 'Connected to Paytaca.');
+});

@@ -1,7 +1,7 @@
 // Organizer panel: take the money back from the Funded address (F2). Connects a wallet only to pay the network fee.
 // All text through textContent.
 import { h, copy, qrSvg } from './dom.js';
-import { connect, current, disconnect, hasStoredWallet, qrFor } from './wallet.js';
+import { connect, current, disconnect, hasStoredWallet, qrFor, reconnectNote } from './wallet.js';
 import { cancelPact } from './accept.js';
 import { addressOf } from './pact.js';
 import { provider } from './net.js';
@@ -33,7 +33,7 @@ export function cancelPanel({ pact, keyV, onDone }) {
   function onWallet(s, me) {
     wstate = s === 'pairing' ? (pairBox ? 'pairing' : 'idle') : s;
     if (s === 'ready') stepEl.textContent = `Connected to ${me.mgr.walletName || 'your wallet'}.`;
-    else if (s === 'connecting') stepEl.textContent = 'Reconnecting to your wallet…';
+    else if (s === 'connecting') reconnectNote(stepEl);
     else if (s === 'lost') stepEl.textContent = 'Connection to the wallet was lost. Trying again…';
     render();
   }

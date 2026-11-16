@@ -1,6 +1,6 @@
 // Reusable wallet connection box (QR pairing, reconnect, disconnect). All text through textContent.
 import { h, copy, qrSvg } from './dom.js';
-import { connect, current, disconnect, hasStoredWallet, qrFor } from './wallet.js';
+import { connect, current, disconnect, hasStoredWallet, qrFor, reconnectNote } from './wallet.js';
 
 // onChange(): called whenever the connection state changes. Returns { el, isReady(), mgr(), say(text) }.
 export function walletBox({ onChange, connectLabel = 'Connect wallet to pay the fee' } = {}) {
@@ -19,7 +19,7 @@ export function walletBox({ onChange, connectLabel = 'Connect wallet to pay the 
   function onWallet(s, me) {
     wstate = s === 'pairing' ? (pairBox ? 'pairing' : 'idle') : s;
     if (s === 'ready') stepEl.textContent = `Connected to ${me.mgr.walletName || 'your wallet'}.`;
-    else if (s === 'connecting') stepEl.textContent = 'Reconnecting to your wallet…';
+    else if (s === 'connecting') reconnectNote(stepEl);
     else if (s === 'lost') stepEl.textContent = 'Connection to the wallet was lost. Trying again…';
     render();
   }

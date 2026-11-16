@@ -14,6 +14,14 @@ export const resetWalletListeners = () => listeners.clear();
 export const hasStoredWallet = () => { try { const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return !!(s && s.walletPublicKey); } catch { return false; } };
 export const current = () => cur;
 
+// A stored session that the wallet does not answer must not show "Reconnecting…" for ever: after a while say what the person can do.
+const RECONNECT_TEXT = 'Reconnecting to your wallet…';
+const STUCK_TEXT = 'Your wallet is not answering. Open the wallet app and wait a moment, or choose "Use another wallet" to pair again.';
+export function reconnectNote(stepEl, ms = 25000) {
+  stepEl.textContent = RECONNECT_TEXT;
+  setTimeout(() => { if (stepEl.textContent === RECONNECT_TEXT) stepEl.textContent = STUCK_TEXT; }, ms);
+}
+
 export function qrFor(text) { const q = qrcode(0, 'L'); q.addData(text); q.make(); return q; }
 
 // onChange(state, info): state = 'pairing' | 'connecting' | 'ready' | 'lost'
