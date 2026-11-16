@@ -58,3 +58,12 @@ ol.todo { padding-left:20px; color:var(--mute); } ol.todo li { margin:6px 0; } o
 .qr svg { display: block; max-width: 100%; height: auto; }
 
 .note { overflow-wrap: anywhere; }
+
+.example { margin:8px 0 28px; }
+.example h2 { margin:0 0 6px; font-size:1.4rem; letter-spacing:-.01em; }
+.ex { border:1px solid var(--line); border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:8px; }
+.ex b { color:var(--accent); font-size:.8rem; letter-spacing:.12em; text-transform:uppercase; }
+.ex p { margin:0; color:var(--mute); }
+.ex code { font-size:.85rem; overflow-wrap:anywhere; }
+.example .steps { margin:16px 0 0; }
+.ex .row { margin-top:auto; }

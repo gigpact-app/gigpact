@@ -49,6 +49,24 @@ async function etaText(tEnd) {
   try { const t = await tip(); const ms = Date.now() + (tEnd - t) * 600_000; return `${new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (block ${tEnd})`; } catch { return `block ${tEnd}`; }
 }
 
+// A real run on mainnet (16 Nov 2026, test amount), for readers without a wallet. Not simulated.
+const EXAMPLE = [
+  { n: '1 · Locked', what: 'The organizer locked 10,000 sat (0.0001 BCH) into the pact.', tx: '6e715ef3ff155358cdcc1283bd5eeb194b9c6a51e4c679477fbeb205ccc86b4a' },
+  { n: '2 · Accepted', what: 'The worker accepted with a wallet signature. The money stayed in the pact.', tx: 'e5d41659ee5bba9393cf2b980a3b6dbd32f68910928a8902711b05fb39bb592b' },
+  { n: '3 · Paid', what: 'The organizer released the pact and the worker was paid.', tx: 'f03fc1ef4ddd8b007c3a109f608b96e999d0b95631575e9a66258ece495ba163' },
+];
+function realExample() {
+  const rows = EXAMPLE.map((e) => {
+    const cp = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy id');
+    cp.addEventListener('click', () => copy(e.tx, cp));
+    const a = h('a', { class: 'btn small ghost', href: `https://3xpl.com/bitcoin-cash/transaction/${e.tx}`, target: '_blank', rel: 'noopener noreferrer' }, 'View on explorer');
+    return h('div', { class: 'ex' }, h('b', {}, e.n), h('p', {}, e.what), h('code', {}, `${e.tx.slice(0, 10)}…${e.tx.slice(-8)}`), h('div', { class: 'row' }, a, cp));
+  });
+  return h('div', { class: 'example' }, h('h2', {}, 'See it on the chain'),
+    h('p', { class: 'sub' }, 'This is a real run of the prototype on Bitcoin Cash mainnet, 16 November 2026. These are three real transactions with a tiny test amount, not a simulation. You can check each one in a block explorer.'),
+    h('div', { class: 'steps' }, ...rows));
+}
+
 // ---- screens ---------------------------------------------------------------------------------------------------
 function home() {
   app.replaceChildren(h('div', { class: 'wrap' }, top(),
@@ -59,6 +77,7 @@ function home() {
       h('div', { class: 'step' }, h('b', {}, '1 · LOCK'), h('h3', {}, 'Agree the fee'), h('p', {}, 'You set the fee and the event end. The organizer locks the money into your pact before the gig.')),
       h('div', { class: 'step' }, h('b', {}, '2 · PLAY'), h('h3', {}, 'Do the show'), h('p', {}, 'You accept the pact and play. The money cannot be spent by anyone except along the pact’s rules.')),
       h('div', { class: 'step' }, h('b', {}, '3 · GET PAID'), h('h3', {}, 'The pact pays you'), h('p', {}, 'After the show you claim your fee. If the organizer stays silent, it pays out to you on its own.'))),
+    realExample(),
     h('p', { class: 'note' }, 'Prototype on Bitcoin Cash mainnet. You can create a pact, fund it, accept it with a WizardConnect wallet, and pay out or take the money back. Claim after the event, waive and the dispute steps are still being tested. Use small amounts.')));
 }
 
