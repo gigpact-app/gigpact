@@ -2,15 +2,20 @@
 // Builds Dispute -> Requested -> Accepted -> Funded bottom-up, because each state embeds the locking
 // bytecode of the next one. The contracts do NOT cross-check these parameters (G1-03); this module
 // is where I12 is enforced and verified.
-import { readFileSync } from 'node:fs';
 import { Contract, SignatureTemplate } from 'cashscript';
 import { cashAddressToLockingBytecode, binToHex, secp256k1 } from '@bitauth/libauth';
 import { strictBytes } from './errors.mjs';
+// JSON imports (not fs) so the same library runs in Node and in the browser bundle; the files are the frozen compiled artifacts.
+import Funded from '../artifacts/GigPactFunded.json' with { type: 'json' };
+import Accepted from '../artifacts/GigPactAccepted.json' with { type: 'json' };
+import Requested from '../artifacts/GigPactRequested.json' with { type: 'json' };
+import Dispute from '../artifacts/GigPactDispute.json' with { type: 'json' };
 
 export const BIP68_MAX_BLOCKS = 0xffffn; // largest block-based relative lock (low 16 bits of nSequence)
 export const DEFAULTS = Object.freeze({ dv: 432n, l: 2016n, G: 1008n, dust: 1000n }); // blocks; G = 7 days
-const ART = ['GigPactFunded', 'GigPactAccepted', 'GigPactRequested', 'GigPactDispute'];
-const art = (n) => JSON.parse(readFileSync(new URL(`../artifacts/${n}.json`, import.meta.url)));
+const ART_JSON = { GigPactFunded: Funded, GigPactAccepted: Accepted, GigPactRequested: Requested, GigPactDispute: Dispute };
+const ART = Object.keys(ART_JSON);
+const art = (n) => structuredClone(ART_JSON[n]); // a fresh copy per use, as readFileSync+JSON.parse gave before
 export const artifacts = () => Object.fromEntries(ART.map((n) => [n, art(n)]));
 
 const hex = (b) => (typeof b === 'string' ? b : binToHex(b));
