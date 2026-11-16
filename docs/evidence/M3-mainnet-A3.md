@@ -23,5 +23,5 @@ Date: 2026-11-16 (Istanbul, about 16:30). Network: Bitcoin Cash mainnet.
 
 ## What this does NOT show
 - C1 (the worker collects after 432 blocks, about 3 days) has not run yet: the claim output must first have 432 confirmations (earliest at chain tip 978,050). It is planned on this same pact and will get its own evidence file (or an addition here) if it runs.
-- A2, C2-C4 and D1-D6 have not run on mainnet with a real wallet.
+- A2, A4, C2-C4 and D1-D6 have not run on mainnet with a real wallet.
 - The same wallet owned both roles. The "organizer stays silent" case was simulated by simply not paying.

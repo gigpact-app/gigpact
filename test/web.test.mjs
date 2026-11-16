@@ -72,3 +72,20 @@ test('numbers: the library rules apply before a link is ever made (fee floor, K1
   assert.throws(() => checkNumbers({ ...base, F: 7999n }), /fA must be <= F\/4|F - fA|F\/2/);
   assert.throws(() => checkNumbers({ ...base, F: 0n }));
 });
+
+test('links: only a plain P2PKH lock is accepted; bidi controls are stripped from names', async () => {
+  const { termsOf } = await import('../web/pact.js');
+  const code = encodePact(base);
+  const decoded = decodePact(code); assert.equal(decoded.F, 200000n);
+  const body = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(code.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))));
+  const mutate = (o) => btoa(JSON.stringify({ ...body, ...o })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  bad(() => decodePact(mutate({ lockW: '51'.repeat(25) })), /damaged/);                     // 25 bytes, but not P2PKH
+  bad(() => decodePact(mutate({ lockW: body.lockW.replace(/^76a914/, '76a915') })), /damaged/);
+  assert.equal(cleanName('Gig‮txt⁦x'), 'Gig txt x');
+  // terms fingerprint: changes with every term, not with key order
+  const a = termsOf(base, false);
+  assert.equal(a, termsOf({ ...base }, false));
+  for (const ch of [{ F: 200001n }, { tEnd: 960001 }, { name: 'Other' }, { lockW: mk().lock }, { pkW: mk().pk }]) assert.notEqual(termsOf({ ...base, ...ch }, false), a);
+  const V = mk(), full = { ...base, pkV: V.pk, lockV: V.lock };
+  assert.notEqual(termsOf(full, true), termsOf({ ...full, lockV: mk().lock }, true));
+});

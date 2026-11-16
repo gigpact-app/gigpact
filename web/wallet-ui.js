@@ -33,7 +33,7 @@ export function walletBox({ onChange, connectLabel = 'Connect wallet to pay the 
       h('p', { class: 'note' }, 'The code only sets up an encrypted channel. Your wallet will ask you before anything is signed.'));
     slot.replaceChildren(pairBox);
   }
-  connBtn.addEventListener('click', () => { stepEl.textContent = 'Waiting for your wallet…'; wstate = 'pairing'; const me = connect(onWallet); showPairing(me); render(); });
+  connBtn.addEventListener('click', () => { stepEl.textContent = 'Waiting for your wallet…'; wstate = 'pairing'; const me = connect(onWallet, { fresh: true }); showPairing(me); render(); });
   discBtn.addEventListener('click', () => { disconnect(true); pairBox = null; slot.replaceChildren(); wstate = 'idle'; stepEl.textContent = ''; render(); });
   el.append(h('div', { class: 'row' }, connBtn, discBtn), slot, stepEl);
   if (hasStoredWallet()) { wstate = 'connecting'; connect(onWallet); }

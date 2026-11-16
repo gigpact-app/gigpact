@@ -49,6 +49,7 @@ Known test hygiene: each regtest file depends on its own setup test and on `--te
 - Gemini read the text only and ran nothing: regtest outcomes are not independently reproduced by it.
 
 ## G4-a WizardConnect module (16 Nov 2026) — `src/wizard.mjs`
+(The text below is the state at G4-a. Later the same day Paytaca signed F1, A1, F2 and A3 on mainnet: see docs/evidence/M1 to M3.)
 Evidence level: R-VM + regtest with a SOFTWARE wallet (`test/wallet-sim.mjs`). No real wallet (Paytaca, Selene) has signed anything with this module yet; no mainnet.
 - Design (Yol B): the contract input is signed in the browser with the role key (V/W/A) and arrives in the request with its complete unlocking bytecode; the only input the wallet signs is the sponsor P2PKH input (empty script in the request). `inputPaths` is sparse: `[[inputIndex, pathName, addressIndex]]` for sponsor inputs only. Request shape follows `@wizardconnect/dapp` 0.2.7 / `@wizardconnect/core` 0.2.10 (pinned): `transaction: { transaction: <hex>, sourceOutputs: [relay JSON], userPrompt? }`, bytes as hex, bigint as `<bigint: Nn>`.
 - Why it works: the 0x61 (ALL|FORKID|UTXOS) preimage commits to outpoints, sequences, outputs and all source outputs but not to unlocking scripts, so the wallet filling the sponsor script afterwards cannot invalidate the role signature. The fee is fitted against a 100-byte dummy sponsor script (fixed-width Schnorr), then the dummy is blanked; no throwaway key is used.

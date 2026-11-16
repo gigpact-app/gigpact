@@ -17,6 +17,7 @@ const ACTIONS = {
   },
   requested: {
     organizer: [{ path: 'C3', label: 'Pay the worker now', help: (p) => `The worker claimed the pay. Releases the money to the worker's payout address ${addressOf(p.lockW)}.` }],
+    viewer: [{ path: 'C1', label: 'Collect the pay (after the waiting period)', help: (p) => `Needs no key. Possible when the money has waited 432 blocks (about 3 days) at the claim stage. The money goes to the worker's payout address ${addressOf(p.lockW)}.` }],
     worker: [
       { path: 'C1', label: 'Collect the pay (after the waiting period)', help: (p) => `Possible when the money has waited 432 blocks (about 3 days) at the claim stage. Pays your payout address ${addressOf(p.lockW)}.` },
       { path: 'C4', label: 'Waive: give the money back', help: (p) => `Returns the money to the organizer's refund address ${addressOf(p.lockV)}.`, ghost: true },
@@ -25,10 +26,10 @@ const ACTIONS = {
 };
 const STAT = {
   accepted: { organizer: 'The worker accepted. When the work is done, pay the worker from here.', worker: 'You accepted. Later you can claim the pay here.' },
-  requested: { organizer: 'The worker claimed the pay after the event. You can still pay now. Otherwise the worker can collect after the waiting period.', worker: 'You claimed the pay. The money waits at the claim stage. When the waiting period is over you can collect it here.' },
+  requested: { organizer: 'The worker claimed the pay after the event. You can still pay now. Otherwise the worker can collect after the waiting period.', worker: 'You claimed the pay. The money waits at the claim stage. When the waiting period is over you can collect it here.', viewer: 'The worker claimed the pay after the event. Once the waiting period is over, anyone can trigger the payout from here. The money can only go to the worker.' },
 };
 
-// role: 'organizer' | 'worker'. key: Uint8Array of that role. Returns { el, setAccepted(bool) }.
+// role: 'organizer' | 'worker' | 'viewer' (viewer only on the claim stage: collecting needs no key). key: Uint8Array of that role. Returns { el, setAccepted(bool) }.
 export function settlePanel({ pact, role, stage = 'accepted', key, onDone }) {
   const el = h('div', { class: 'panel', hidden: true });
   let accepted = false, busy = false, done = null;

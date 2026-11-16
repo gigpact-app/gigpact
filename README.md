@@ -48,7 +48,7 @@ Levels are kept separate on purpose.
 | Real wallet + mainnet | **F1 accept, A1 pay, F2 cancel and A3 claim only** (Paytaca via WizardConnect) |
 | Regtest (BCHN 29.2.0, local) | Timing, dust, wrong-signer and wrong-amount rejections, dispute payouts (G3 a/b/c), F1 and A1 with a software-wallet-signed sponsor input (G4-a) |
 | Software wallet / contract VM tests | All 16 paths build, sign and verify offline; wallet-misbehaviour cases are refused |
-| Not tested on a real wallet or mainnet | A2 (waive), C1–C4 (C1, collect after 432 blocks, is planned for 19 Nov), D1–D6 |
+| Not tested on a real wallet or mainnet | A2 (waive), A4, C1–C4 (C1, collect after 432 blocks, is planned for 19 Nov), D1–D6. Of these, regtest has run A4, C1, C2 and D1–D6; A2, C3 and C4 only ran in the contract VM and with a software wallet |
 | Not verified | Selene as a wallet; token-carrying inputs; the dispute paths with a real arbiter (the app uses a discarded demo arbiter key, so disputes cannot be decided and are closed in the UI) |
 
 `npm test` runs 223 tests (contract VM, library, web logic). Regtest tests need a local BCHN node (`npm run test:regtest`). Full notes: [docs/G1-BOUNDARIES.md](docs/G1-BOUNDARIES.md).
@@ -57,7 +57,8 @@ Levels are kept separate on purpose.
 
 - Funding is a plain send from any wallet. Sending a wrong amount cannot be accepted by the contract (it takes exactly the fee) and the money can only be taken back with the organizer's key.
 - The organizer's key lives in the browser (localStorage). The app offers a backup box; if you lose the key and the browser data, the funds at that stage are locked. One test pact on mainnet is locked this way (30,000 sat, see the evidence file).
-- The "Settled" display is a marker kept per browser. Another browser sees the chain state, not the marker.
+- The "Settled" and "Cancelled" displays are markers kept per browser. Another browser shows the chain state: a pact address that already received and spent money is shown as "Already used" (no pay box). Strays (small payments sent to a pact address by anyone) are ignored when the app decides the stage.
+- The worker's signing key is also kept only in the browser (the organizer gets a backup box). A worker who loses it cannot waive or claim; the collect step (C1) needs no key and is offered to any browser once the waiting period is over.
 - The silent-organizer path (claim after the event end, then collect after 432 blocks) is the contract design (A3, then C1). It passed regtest and software tests; see the evidence notes for any real-wallet run on mainnet.
 - Time is counted in blocks, not clock time. The dates in the app are estimates (about 10 minutes per block), so the 432-block wait is about 3 days, give or take a few hours.
 - No audit. Contract sources are frozen for the hackathon.

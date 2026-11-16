@@ -1,14 +1,14 @@
 // GigPact web app (skeleton). Plain DOM, no framework. All text from links goes in via textContent, never innerHTML.
 import { binToHex, hexToBin, sha256 } from '@bitauth/libauth';
 import { NET, MIN_FEE_SAT, MIN_LEAD_BLOCKS, REPO_URL, PRESENTATION_URL, DECLARATION_URL, BEFORE_AFTER_URL, TOKEN_ADDR } from './config.js';
-import { UiError, newKey, pubOf, lockOfPk, parseAddress, addressOf, parseBch, fmtBch, encodePact, decodePact, pactId, chainFor, checkNumbers, cleanName } from './pact.js';
+import { UiError, newKey, pubOf, lockOfPk, parseAddress, addressOf, parseBch, fmtBch, encodePact, decodePact, pactId, termsOf, chainFor, checkNumbers, cleanName } from './pact.js';
 import { provider, tip, utxosAt } from './net.js';
 import { h, copy } from './dom.js';
 import { workerPanel } from './worker-ui.js';
 import { cancelPanel } from './cancel-ui.js';
 import { settlePanel } from './settle-ui.js';
 import { qrSvg } from './dom.js';
-import { qrFor } from './wallet.js';
+import { qrFor, resetWalletListeners } from './wallet.js';
 
 const app = document.getElementById('app');
 let timers = [];
@@ -99,7 +99,7 @@ function home() {
     h('div', { class: 'steps' },
       h('div', { class: 'step' }, h('b', {}, '1 · LOCK'), h('h3', {}, 'Agree the fee'), h('p', {}, 'You set the fee and the event end. The organizer locks the money into your pact before the gig.')),
       h('div', { class: 'step' }, h('b', {}, '2 · PLAY'), h('h3', {}, 'Do the show'), h('p', {}, 'You accept the pact and play. The money cannot be spent by anyone except along the pact’s rules.')),
-      h('div', { class: 'step' }, h('b', {}, '3 · GET PAID'), h('h3', {}, 'The pact pays you'), h('p', {}, 'After the show you claim your fee. If the organizer does not object within about 3 days, you collect it.'))),
+      h('div', { class: 'step' }, h('b', {}, '3 · GET PAID'), h('h3', {}, 'The pact pays you'), h('p', {}, 'After the show you claim your fee. The organizer can object during a waiting period of about 3 days (dispute steps are not open in this prototype); then you collect it.'))),
     realExample(),
     vision(),
     h('p', { class: 'note' }, 'Prototype on Bitcoin Cash mainnet. You can create a pact, fund it, accept it with a WizardConnect wallet, and pay out or take the money back. Claim after the event, waive and the dispute steps are still being tested. Use small amounts. So far it is built and tested for gigs only; the wider sectors are our vision.')));
@@ -133,7 +133,7 @@ function newPact() {
       const sk = newKey(), pkW = pubOf(sk);
       const p = { name, F, tEnd, pkW, lockW };
       try { checkNumbers(p); } catch (x) { throw new UiError(`This fee cannot be used: ${x.message}`); }
-      if (!store.put(binToHex(pkW), binToHex(sk), { role: 'W' })) throw new UiError('This browser would not let the app save your signing key, so the pact cannot be created. Allow site storage and try again.');
+      if (!store.put(binToHex(pkW), binToHex(sk), { role: 'W', th: termsOf(p, false) })) throw new UiError('This browser would not let the app save your signing key, so the pact cannot be created. Allow site storage and try again.');
       const code = encodePact(p), url = `${location.origin}${location.pathname}#/pact/${code}`;
       out.replaceChildren(h('div', { class: 'panel', style: 'margin-top:22px' },
         h('h2', {}, 'Send this link to the organizer'),
@@ -148,12 +148,24 @@ function newPact() {
   app.replaceChildren(h('div', { class: 'wrap' }, top(), h('h2', {}, 'Create a pact for your gig'), h('p', { class: 'sub' }, 'Four quick questions. You get a link to send to the organizer.'), form, out));
 }
 
+// Has this lock ever received money (including unconfirmed)? null when the server could not answer.
+async function everUsed(lock) {
+  try { const sh = binToHex(sha256.hash(lock).reverse()); const hist = await provider.performRequest('blockchain.scripthash.get_history', sh); return Array.isArray(hist) ? hist.length > 0 : null; } catch { return null; }
+}
+
 async function pactScreen(code) {
+  resetWalletListeners();
   const wrap = h('div', { class: 'wrap' }, top());
   app.replaceChildren(wrap);
   let p; try { p = decodePact(code); } catch (x) { wrap.append(h('p', { class: 'err' }, x.message), link('#/', 'Back to start')); return; }
   try { checkNumbers(p); } catch (x) { wrap.append(h('p', { class: 'err' }, `This pact has terms that cannot work: ${x.message}`)); return; }
   const pkW = binToHex(p.pkW), mineW = store.find(pkW), pkVhex = p.pkV && binToHex(p.pkV), mineV = pkVhex && store.find(pkVhex);
+  // The key record remembers the terms that were entered in THIS browser. A link that differs (someone changed the fee, the payout
+  // address, the end block, ...) is refused: the role key alone must never be enough to trust a link.
+  if ((mineW?.th && termsOf(p, false) !== mineW.th) || (mineV?.th && p.pkV && termsOf(p, true) !== mineV.th)) {
+    wrap.append(h('p', { class: 'err' }, 'This link does not match what was entered when this pact was created in this browser: the fee, the end, the name or an address was changed. Do not use it. Ask for the original link.'), link('#/', 'Back to start'));
+    return;
+  }
   const fillEta = () => etaText(p.tEnd).then((t) => document.querySelectorAll('.eta').forEach((e) => { e.textContent = t; }));
 
   if (!p.pkV) { // organizer, step 1: refund address -> V key -> funding address
@@ -173,14 +185,17 @@ async function pactScreen(code) {
     const form = h('form', { class: 'card', novalidate: true },
       h('h2', {}, 'You are the organizer'), h('p', { class: 'sub' }, 'Pay the fee into this pact before the gig. If the worker never accepts, you can take it back.'),
       h('label', { for: 'refund' }, 'Your refund address (BCH)'), addr, h('div', { class: 'hint' }, 'If the pact is cancelled or settled in your favour, the money returns here.'), err, h('div', { class: 'row' }, btn));
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault(); err.textContent = '';
       try {
         const lockV = parseAddress(addr.value);
+        if (p.F < MIN_FEE_SAT) throw new UiError(`The fee in this request is below the minimum of ${fmtBch(MIN_FEE_SAT)} BCH. Ask the worker for a new link.`);
+        let t; try { t = await tip(); } catch { throw new UiError('Could not reach the Bitcoin Cash network to read the current block. Check your connection and try again.'); }
+        if (p.tEnd < t + MIN_LEAD_BLOCKS) throw new UiError('The event end in this request is already too close or in the past. Ask the worker for a new link.');
         const sk = newKey(), pkV = pubOf(sk);
-        if (!store.put(binToHex(pkV), binToHex(sk), { role: 'V' })) throw new UiError('This browser would not let the app save your signing key. Allow site storage and try again.');
         const full = { ...p, pkV, lockV };
         chainFor(full, provider); // throws if the terms are not allowed
+        if (!store.put(binToHex(pkV), binToHex(sk), { role: 'V', th: termsOf(full, true) })) throw new UiError('This browser would not let the app save your signing key. Allow site storage and try again.');
         location.hash = `#/pact/${encodePact(full)}`;
       } catch (x) { err.textContent = x instanceof UiError ? x.message : `This cannot be created: ${x.message}`; }
     });
@@ -213,18 +228,26 @@ async function pactScreen(code) {
       const A = chain.addresses;
       const [us, acc, later] = await Promise.all([utxosAt(A.funded), utxosAt(A.accepted), Promise.all([A.requested, A.d100, A.d50].map((a) => utxosAt(a)))]);
       cp?.setHeld(us);
-      const accOk = acc.filter((u) => u.satoshis === p.F);
-      sp?.setAccepted(accOk.length === 1 && acc.length === 1 && us.length === 0);
-      const req = later[0], reqOk = req.filter((u) => u.satoshis === p.F && !u.token);
-      const claimed = reqOk.length === 1 && req.length === 1 && us.length === 0 && acc.length === 0 && later[1].length === 0 && later[2].length === 0;
+      // The pact money is the one plain output of exactly F at a stage address. Anyone can send a small payment to any address,
+      // so other outputs ("strays") are ignored when deciding the stage; they never hide a way out.
+      const exactOf = (l) => l.filter((u) => u.satoshis === p.F && !u.token);
+      const fx = exactOf(us), ax = exactOf(acc), rx = exactOf(later[0]), dx = exactOf(later[1]).length + exactOf(later[2]).length;
+      const acceptedNow = ax.length === 1 && fx.length === 0 && rx.length === 0 && dx === 0;
+      const claimed = rx.length === 1 && fx.length === 0 && ax.length === 0 && dx === 0;
+      sp?.setAccepted(acceptedNow);
       sp2?.setAccepted(claimed);
-      if (claimed) { setState('Claimed', 'ok', `The worker claimed the pay after the event. The money waits at the claim stage (${reqOk[0].txid}:${reqOk[0].vout}). After 432 blocks (about 3 days) the worker can collect it.`); wp?.setFunded(false, true); return; }
-      if (accOk.length === 1 && acc.length === 1 && us.length === 0) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${accOk[0].txid}:${accOk[0].vout}`); wp?.setFunded(false, true); return; }
-      if (acc.length || later.some((x) => x.length)) { setState('Past the funded stage', 'warn', 'This pact has moved on. Later stages are not shown in this build yet.'); wp?.setFunded(false); return; }
+      if (claimed) { setState('Claimed', 'ok', `The worker claimed the pay after the event. The money waits at the claim stage (${rx[0].txid}:${rx[0].vout}). After 432 blocks (about 3 days) it can be collected.`); wp?.setFunded(false, true); return; }
+      if (acceptedNow) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${ax[0].txid}:${ax[0].vout}`); wp?.setFunded(false, true); return; }
+      if (ax.length || rx.length || dx) { setState('Past the funded stage', 'warn', 'This pact has moved on to a stage this build does not show.'); wp?.setFunded(false); return; }
       const exact = us.filter((u) => u.satoshis === p.F);
       if (exact.length === 1 && us.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${exact[0].txid}:${exact[0].vout}`); wp?.setFunded(true); }
       else if (us.length === 0 && doneMark()) { const d = doneMark(); if (d.path === 'F2') setState('Cancelled', 'warn', `The organizer cancelled before the worker accepted. The money went back to ${d.to}. Transaction ${d.txid}. Do not pay this pact again.`); else setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true); return; }
-      else if (us.length === 0) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); payBox.hidden = false; return; }
+      else if (us.length === 0) {
+        const used = await everUsed(chain.locks.funded);
+        if (used === false) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); payBox.hidden = false; return; }
+        if (used === true) { setState('Already used', 'warn', 'Money already passed through this pact address and none is left in it. Do not pay it again. Create a new pact for a new gig.'); wp?.setFunded(false, true); return; }
+        setState('Waiting for funding', 'warn', 'Nothing was found at the funding address. The history could not be checked, so the pay box is hidden.'); wp?.setFunded(false); return;
+      }
       else { setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`); wp?.setFunded(false); }
     } catch { setState('Cannot check the chain', 'bad', 'The network did not answer. Retrying.'); }
   }
@@ -262,13 +285,13 @@ async function pactScreen(code) {
     : role === 'worker'
       ? (wp = workerPanel({ pact: p, keyW: hexToBin(mineW.sk), onDone: () => refresh() })).el
       : h('div', {}, h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.')), restoreBox());
-  if (role !== 'viewer') {
-    const rk = hexToBin((role === 'organizer' ? mineV : mineW).sk);
-    sp = settlePanel({ pact: p, role, key: rk, onDone: (r) => { markDone(r); refresh(); } });
-    sp2 = settlePanel({ pact: p, role, stage: 'requested', key: rk, onDone: (r) => { markDone(r); refresh(); } });
-  }
+  // A3 only moves the money to the next stage; every other path ends the pact, so only those leave a marker.
+  const finished = (r) => { if (r?.path !== 'A3') markDone(r); refresh(); };
+  const rk = role === 'viewer' ? null : hexToBin((role === 'organizer' ? mineV : mineW).sk);
+  if (role !== 'viewer') sp = settlePanel({ pact: p, role, key: rk, onDone: finished });
+  sp2 = settlePanel({ pact: p, role, stage: 'requested', key: rk, onDone: finished });
   if (role === 'organizer') cp = cancelPanel({ pact: p, keyV: hexToBin(mineV.sk), onDone: (r) => { if (r?.txid) markDone({ path: 'F2', txid: r.txid, to: r.refundTo }); refresh(); } });
-  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el, sp2.el] : []), ...(cp ? [keyBox(), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
+  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el] : []), sp2.el, ...(cp ? [keyBox(), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
     h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…')), payBox), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
   fillEta(); refresh(); timers.push(setInterval(refresh, 20000));
 }
@@ -278,7 +301,7 @@ function route() {
   stopTimers();
   const hash = location.hash.replace(/^#/, '') || '/';
   const m = hash.match(/^\/pact\/([A-Za-z0-9_-]+)$/);
-  if (hash === '/') home(); else if (hash === '/new') newPact(); else if (m) pactScreen(m[1]); else home();
+  if (hash === '/') home(); else if (hash === '/new') newPact(); else if (m) pactScreen(m[1]).catch(() => { app.replaceChildren(h('div', { class: 'wrap' }, top(), h('p', { class: 'err' }, 'Something went wrong while opening this pact. Reload the page. If it keeps happening, ask for a new link.'), link('#/', 'Back to start'))); }); else home();
   window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', route);

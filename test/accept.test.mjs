@@ -177,3 +177,37 @@ test('settle (claim stage): C1 collect needs 432 confirmations and sets the rela
   n = net({ coins: req(99999n) }); n.p.confirmationsOf = async () => 500; await bad(settlePact({ pact, path: 'C1', key: kW, mgr: mgr(), provider: n.p }), /exactly one output of 100000/); assert.equal(n.sent.length, 0);
   n = net({ coins: req() }); await assert.rejects(settlePact({ pact, path: 'C3', key: kW, mgr: mgr(), provider: n.p })); assert.equal(n.sent.length, 0); // W cannot sign the V path
 });
+
+test('settle: a stray payment at the stage address does not block the exit; two outputs of exactly F do', async () => {
+  const stray = { txid: T(81), vout: 3, satoshis: 546n }, main = { txid: T(82), vout: 0, satoshis: 100000n }, fee = { [walletAddr('receive', 3)]: [{ txid: T(22), vout: 1, satoshis: 30000n }] };
+  let n = net({ coins: { [chain.addresses.accepted]: [stray, main], ...fee } });
+  const r = await settlePact({ pact, path: 'A1', key: kV, mgr: mgr(), provider: n.p });
+  const tx = decodeTransactionBch(hexToBin(n.sent[0]));
+  assert.equal(binToHex(tx.inputs[0].outpointTransactionHash), T(82), 'the exact-F output is spent, not the stray'); assert.equal(r.path, 'A1');
+  n = net({ coins: { [chain.addresses.accepted]: [{ ...main, txid: T(83) }, main, stray], ...fee } });
+  await bad(settlePact({ pact, path: 'A1', key: kV, mgr: mgr(), provider: n.p }), /found 2/); assert.equal(n.sent.length, 0);
+  n = net({ coins: { [chain.addresses.accepted]: [{ ...main, token: { amount: 1n, category: T(9) } }], ...fee } });
+  await bad(settlePact({ pact, path: 'A1', key: kV, mgr: mgr(), provider: n.p }), /found 0/); assert.equal(n.sent.length, 0, 'a token output of F is not pact money');
+});
+
+test('settle: unknown confirmation count (server omits it) does not block C1; the node rule is translated for the user', async () => {
+  const req = { [chain.addresses.requested]: [{ txid: T(73), vout: 0, satoshis: 100000n }], [walletAddr('receive', 3)]: [{ txid: T(22), vout: 1, satoshis: 30000n }] };
+  let n = net({ coins: req }); n.p.performRequest = async () => ({});   // no "confirmations" field
+  await settlePact({ pact, path: 'C1', key: kW, mgr: mgr(), provider: n.p }); assert.equal(n.sent.length, 1);
+  n = net({ coins: req, sendResult: () => { throw new Error('non-BIP68-final'); } }); n.p.performRequest = async () => ({});
+  await bad(settlePact({ pact, path: 'C1', key: kW, mgr: mgr(), provider: n.p }), /Not yet.*waited long enough/);
+  n = net({ coins: req }); n.p.performRequest = async () => ({ confirmations: 0 });
+  await bad(settlePact({ pact, path: 'C1', key: kW, mgr: mgr(), provider: n.p }), /Not yet.*waited 0 so far/); assert.equal(n.sent.length, 0);
+});
+
+test('wallet that refuses or errors: plain message, nothing broadcast; prompt names the real payout address and strips markup from the name', async () => {
+  const p1 = { ...pact, name: 'Show <b>"x"</b>' };
+  let seen = null;
+  const spy = { ...mgr(), signTransaction: async (req) => { seen = req; throw new Error('user rejected'); } };
+  const n = net({ coins: { [chain.addresses.accepted]: [{ txid: T(82), vout: 0, satoshis: 100000n }], [walletAddr('receive', 3)]: [{ txid: T(22), vout: 1, satoshis: 30000n }] } });
+  await bad(settlePact({ pact: p1, path: 'A1', key: kV, mgr: spy, provider: n.p }), /did not complete the request \(user rejected\)\. Nothing was sent/);
+  assert.equal(n.sent.length, 0); assert.ok(seen);
+  const { SETTLE_TEXT } = await import('../web/accept.js');
+  const t = SETTLE_TEXT.A1(p1, 100000n);
+  assert.ok(t.includes('bitcoincash:q') && !t.includes('<b>') && !t.includes('&'), 'real address, no markup');
+});

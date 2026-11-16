@@ -41,8 +41,8 @@ export function fmtBch(sat) {
 // ---- pact link: worker request (r) and organizer reply (p = r + V data) ---------------------------------
 const b64u = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
-const HEX33 = /^0[23][0-9a-f]{64}$/, HEXLOCK = /^[0-9a-f]{50}$/; // 33-byte key; 25-byte P2PKH lock
-export const cleanName = (s) => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 60);
+const HEX33 = /^0[23][0-9a-f]{64}$/, HEXLOCK = /^76a914[0-9a-f]{40}88ac$/; // 33-byte key; 25-byte P2PKH lock (exactly that script, nothing else)
+export const cleanName = (s) => String(s).replace(/[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').trim().slice(0, 60);
 
 export function encodePact(o) {
   const body = { v: 1, n: NET, name: cleanName(o.name), F: o.F.toString(), tEnd: o.tEnd, pkW: binToHex(o.pkW), lockW: binToHex(o.lockW) };
@@ -61,6 +61,8 @@ export function decodePact(code) {
   if (o.pkV !== undefined || o.lockV !== undefined) { need(HEX33.test(o.pkV) && HEXLOCK.test(o.lockV), 'This pact link is damaged.'); out.pkV = hexToBin(o.pkV); out.lockV = hexToBin(o.lockV); }
   return out;
 }
+// Fingerprint of the terms a role holder entered. It is stored next to that role's key; a link whose terms differ is refused.
+export const termsOf = (p, withV) => binToHex(sha256.hash(new TextEncoder().encode(JSON.stringify([p.name, p.F.toString(), p.tEnd, binToHex(p.pkW), binToHex(p.lockW), ...(withV ? [binToHex(p.pkV), binToHex(p.lockV)] : [])]))));
 export const pactId = (code) => binToHex(sha256.hash(new TextEncoder().encode(String(code)))).slice(0, 16);
 
 // The chain for a complete pact (V and W known). Throws the library's own ParamError if the numbers are not allowed.

@@ -1,7 +1,8 @@
 // Worker "accept" (F1) through a connected WizardConnect wallet. No DOM here: everything the screen needs is injected,
 // so the same code runs in the tests with a software wallet and a fake network.
 //
-// Evidence level: R-VM / software wallet (see test/accept.test.mjs). No real wallet has run this yet.
+// Evidence level of the code in this file: tests with a software wallet (test/accept.test.mjs). Real-wallet mainnet runs so far:
+// F1, A1, F2, A3 (docs/evidence/M1-M3). The other paths have only run with a software wallet.
 import { SignatureTemplate } from 'cashscript';
 import { encodeLockingBytecodeP2pkh, hash160, lockingBytecodeToCashAddress } from '@bitauth/libauth';
 import { planSpend, changeFloor, PATHS } from '../src/spend.mjs';
@@ -10,9 +11,21 @@ import { prepareSign, verifySigned, findSponsorPath, WC_PATHS } from '../src/wiz
 import { UiError, chainFor, addressOf } from './pact.js';
 import { PREFIX } from './config.js';
 
-const SCAN = { receive: 60, change: 30 }; // addresses per path name that are looked at for a sponsor coin (a used wallet's open address can be well past 20)
+const SCAN = { receive: 50, change: 30 }; // addresses per path name that are looked at for a sponsor coin (a used wallet's open address can be well past 20)
 const CONCURRENCY = 8;
 const FEE_ALLOWANCE = 3000n;   // rough upper bound for the F1 fee, used only to pre-select sponsor coins (buildTx fits the exact fee)
+
+// Ask the wallet to sign. A wallet that never answers must not freeze the screen; a wallet that refuses rejects the promise.
+const SIGN_TIMEOUT_MS = 180_000;
+async function askWallet(mgr, request) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new UiError('Your wallet did not answer in time. Open the wallet app and try again. Nothing was sent.')), SIGN_TIMEOUT_MS); });
+  try { return await Promise.race([mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths }), timeout]); }
+  catch (x) { if (x instanceof UiError) throw x; throw new UiError(`Your wallet did not complete the request (${String(x?.message || x).slice(0, 120)}). Nothing was sent.`); }
+  finally { clearTimeout(timer); }
+}
+// Names go into the wallet's prompt as plain text; keep markup characters out in case the wallet renders them.
+const promptName = (s) => String(s).replace(/[<>&"'`]/g, ' ');
 
 const lockOfPubkey = (pk) => encodeLockingBytecodeP2pkh(hash160(pk));
 const addrOfLock = (lock) => lockingBytecodeToCashAddress({ bytecode: lock, prefix: PREFIX }).address;
@@ -87,10 +100,10 @@ export async function acceptPact({ pact, keyW, mgr, provider, onStep = () => {} 
   const sponsorPaths = plan.sponsors.map((s) => findSponsorPath(s.lockingBytecode, derive));
   const { request, expected } = prepareSign(plan, {
     provider, keys: { W: keyW }, SignatureTemplate, changeLock, sponsorPaths,
-    userPrompt: `GigPact: accept the pact "${pact.name}". Only the network fee is paid from your wallet; the pact money stays in the pact.`,
+    userPrompt: `GigPact: accept the pact "${promptName(pact.name)}". Only the network fee is paid from your wallet; the pact money stays in the pact.`,
   });
   onStep('Waiting for your wallet to approve…');
-  const response = await mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths });
+  const response = await askWallet(mgr, request);
   const v = verifySigned(expected, response, { derive });
   onStep('Sending to the network…');
   const sent = await provider.sendRawTransaction(v.hex);
@@ -114,10 +127,10 @@ export async function cancelPact({ pact, keyV, mgr, provider, onStep = () => {} 
   const sponsorPaths = plan.sponsors.map((s) => findSponsorPath(s.lockingBytecode, derive));
   const { request, expected } = prepareSign(plan, {
     provider, keys: { V: keyV }, SignatureTemplate, changeLock, sponsorPaths,
-    userPrompt: `GigPact: cancel the pact "${pact.name}" and return ${u.satoshis} sat to the organizer's refund address. Only the network fee is paid from your wallet.`,
+    userPrompt: `GigPact: cancel the pact "${promptName(pact.name)}" and return ${u.satoshis} sat to the organizer's refund address. Only the network fee is paid from your wallet.`,
   });
   onStep('Waiting for your wallet to approve…');
-  const response = await mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths });
+  const response = await askWallet(mgr, request);
   const v = verifySigned(expected, response, { derive });
   onStep('Sending to the network…');
   const sent = await provider.sendRawTransaction(v.hex);
@@ -128,18 +141,19 @@ export async function cancelPact({ pact, keyV, mgr, provider, onStep = () => {} 
 // Accepted-stage exits: A1 pay (organizer, key V), A2 waive (worker, key W), A3 claim (worker, key W, only once the chain has reached tEnd).
 // Exactly one output of exactly F must sit at the contract address of that stage. The connected wallet only adds a coin for the fee.
 export const SETTLE_TEXT = {
-  A1: (p, F) => `GigPact: pay the worker. ${F} sat go from the pact to the worker's payout address "${p.name}". Only the network fee is paid from your wallet.`,
-  A2: (p, F) => `GigPact: waive. ${F} sat go back from the pact to the organizer's refund address "${p.name}". Only the network fee is paid from your wallet.`,
-  A3: (p, F) => `GigPact: claim the pay for "${p.name}". ${F} sat move to the next stage of the pact. Only the network fee is paid from your wallet.`,
-  C1: (p, F) => `GigPact: collect the pay. ${F} sat go from the pact to the worker's payout address "${p.name}". Only the network fee is paid from your wallet.`,
-  C3: (p, F) => `GigPact: pay the worker. ${F} sat go from the pact to the worker's payout address "${p.name}". Only the network fee is paid from your wallet.`,
-  C4: (p, F) => `GigPact: waive. ${F} sat go back from the pact to the organizer's refund address "${p.name}". Only the network fee is paid from your wallet.`,
+  A1: (p, F) => `GigPact: pay the worker for "${promptName(p.name)}". ${F} sat go from the pact to the worker's payout address ${addressOf(p.lockW)}. Only the network fee is paid from your wallet.`,
+  A2: (p, F) => `GigPact: waive "${promptName(p.name)}". ${F} sat go back from the pact to the organizer's refund address ${addressOf(p.lockV)}. Only the network fee is paid from your wallet.`,
+  A3: (p, F) => `GigPact: claim the pay for "${promptName(p.name)}". ${F} sat move to the next stage of the pact. Only the network fee is paid from your wallet.`,
+  C1: (p, F) => `GigPact: collect the pay for "${promptName(p.name)}". ${F} sat go from the pact to the worker's payout address ${addressOf(p.lockW)}. Only the network fee is paid from your wallet.`,
+  C3: (p, F) => `GigPact: pay the worker for "${promptName(p.name)}". ${F} sat go from the pact to the worker's payout address ${addressOf(p.lockW)}. Only the network fee is paid from your wallet.`,
+  C4: (p, F) => `GigPact: waive "${promptName(p.name)}". ${F} sat go back from the pact to the organizer's refund address ${addressOf(p.lockV)}. Only the network fee is paid from your wallet.`,
 };
 // Number of confirmations of a transaction (needed for the relative time lock of C1). A provider may supply its own lookup (tests).
 export async function confirmationsOf(provider, txid) {
   if (typeof provider.confirmationsOf === 'function') return BigInt(await provider.confirmationsOf(txid));
   const r = await provider.performRequest('blockchain.transaction.get', txid, true);
-  const n = Number(r?.confirmations ?? 0);
+  if (r?.confirmations === undefined || r?.confirmations === null) return null; // not reported: unknown, not zero
+  const n = Number(r.confirmations);
   return BigInt(Number.isFinite(n) && n > 0 ? n : 0);
 }
 export async function settlePact({ pact, path, key, mgr, provider, onStep = () => {} }) {
@@ -148,8 +162,10 @@ export async function settlePact({ pact, path, key, mgr, provider, onStep = () =
   const chain = chainFor(pact, provider);
   const F = chain.params.F;
   onStep('Checking the pact on the chain…');
-  const held = await provider.getUtxos(chain.addresses[P.c]);
-  if (!(held.length === 1 && held[0].satoshis === F && !held[0].token)) throw new UiError(`Expected exactly one output of ${F} sat at the ${P.c} address, found ${held.length}${held.length ? ` (${held.map((u) => u.satoshis).join(', ')} sat)` : ''}.`);
+  const all = await provider.getUtxos(chain.addresses[P.c]);
+  // Strays (anyone can send a small payment to any address) are ignored; the pact money is the one plain output of exactly F.
+  const held = all.filter((u) => u.satoshis === F && !u.token);
+  if (held.length !== 1) throw new UiError(`Expected exactly one output of ${F} sat at the ${P.c} address, found ${held.length}${all.length ? ` (the address holds ${all.map((u) => u.satoshis).join(', ')} sat)` : ''}.`);
   const ctx = {};
   if (P.cltv) {
     const tip = BigInt(await provider.getBlockHeight());
@@ -158,8 +174,8 @@ export async function settlePact({ pact, path, key, mgr, provider, onStep = () =
   }
   if (P.csv) {
     const N = chain.params[P.csv], have = await confirmationsOf(provider, held[0].txid);
-    if (have < N) throw new UiError(`Not yet: the money has to wait ${N} blocks at this stage (about ${Math.round(Number(N) / 144)} days); it has waited ${have} so far.`);
-    ctx.confirmations = have;
+    if (have !== null && have < N) throw new UiError(`Not yet: the money has to wait ${N} blocks at this stage (about ${Math.round(Number(N) / 144)} days); it has waited ${have} so far.`);
+    ctx.confirmations = have ?? N; // unknown count: the network itself enforces the relative lock when we send
   }
   const utxo = { txid: held[0].txid, vout: held[0].vout, satoshis: held[0].satoshis, lockingBytecode: Uint8Array.from(chain.locks[P.c]) };
   const { derive, changeLock, sponsors } = await findSponsors({ mgr, provider, onStep });
@@ -167,10 +183,16 @@ export async function settlePact({ pact, path, key, mgr, provider, onStep = () =
   const sponsorPaths = plan.sponsors.map((s) => findSponsorPath(s.lockingBytecode, derive));
   const { request, expected } = prepareSign(plan, { provider, keys: P.signer ? { [P.signer]: key } : {}, SignatureTemplate, changeLock, sponsorPaths, userPrompt: SETTLE_TEXT[path](pact, F) });
   onStep('Waiting for your wallet to approve…');
-  const response = await mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths });
+  const response = await askWallet(mgr, request);
   const v = verifySigned(expected, response, { derive });
   onStep('Sending to the network…');
-  const sent = await provider.sendRawTransaction(v.hex);
+  let sent;
+  try { sent = await provider.sendRawTransaction(v.hex); } catch (x) {
+    const m = String(x?.message || x);
+    if (/BIP68/i.test(m)) throw new UiError('Not yet: the money has not waited long enough at this stage. Try again later. Nothing was sent.');
+    if (/non-?final/i.test(m)) throw new UiError('Not yet: the event end block has not been reached. Try again later. Nothing was sent.');
+    throw x;
+  }
   if (typeof sent === 'string' && sent.toLowerCase() !== v.txid) throw new UiError(`The network reported another transaction id (${sent}) than the one we signed (${v.txid}). Check the explorer before trying again.`);
   return { txid: v.txid, fee: v.fee, size: v.size, hex: v.hex, path, to: addressOf(plan.outs[0].lock) };
 }

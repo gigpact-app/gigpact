@@ -88,7 +88,7 @@ export function workerPanel({ pact, keyW, onDone }) {
   }
   connBtn.addEventListener('click', () => {
     err.textContent = ''; stepEl.textContent = 'Waiting for your wallet…'; wstate = 'pairing';
-    const me = connect(onWallet); showPairing(me); render();
+    const me = connect(onWallet, { fresh: true }); showPairing(me); render();
   });
   discBtn.addEventListener('click', () => { disconnect(true); pairBox = null; slot.replaceChildren(); wstate = 'idle'; stepEl.textContent = ''; render(); });
   accBtn.addEventListener('click', async () => {

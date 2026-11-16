@@ -47,7 +47,7 @@ export function cancelPanel({ pact, keyV, onDone }) {
       h('p', { class: 'note' }, 'The code only sets up an encrypted channel. Your wallet will ask you before anything is signed.'));
     slot.replaceChildren(pairBox);
   }
-  connBtn.addEventListener('click', () => { err.textContent = ''; stepEl.textContent = 'Waiting for your wallet…'; wstate = 'pairing'; const me = connect(onWallet); showPairing(me); render(); });
+  connBtn.addEventListener('click', () => { err.textContent = ''; stepEl.textContent = 'Waiting for your wallet…'; wstate = 'pairing'; const me = connect(onWallet, { fresh: true }); showPairing(me); render(); });
   discBtn.addEventListener('click', () => { disconnect(true); pairBox = null; slot.replaceChildren(); wstate = 'idle'; stepEl.textContent = ''; render(); });
   goBtn.addEventListener('click', async () => {
     const c = current(); if (!c || wstate !== 'ready' || busy || held.length === 0) return;

@@ -6,6 +6,10 @@ import qrcode from 'qrcode-generator';
 
 const SESSION_KEY = 'gigpact.wc';
 let cur = null; // { mgr, relay, uri, qrUri, state }
+// Every panel on a page subscribes here. A page has several wallet boxes; they share ONE connection (a second connect() used to tear the
+// first one down and send a disconnect message to the wallet, so only the last box ever became ready).
+const listeners = new Set();
+export const resetWalletListeners = () => listeners.clear();
 
 export const hasStoredWallet = () => { try { const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return !!(s && s.walletPublicKey); } catch { return false; } };
 export const current = () => cur;
@@ -13,13 +17,15 @@ export const current = () => cur;
 export function qrFor(text) { const q = qrcode(0, 'L'); q.addData(text); q.make(); return q; }
 
 // onChange(state, info): state = 'pairing' | 'connecting' | 'ready' | 'lost'
-export function connect(onChange) {
+export function connect(onChange, { fresh = false } = {}) {
+  if (!fresh && cur) { if (onChange) { listeners.add(onChange); onChange(cur.state, cur); } return cur; }
   disconnect(false);
+  if (onChange) listeners.add(onChange);
   const mgr = new DappConnectionManager('GigPact', undefined, { session: { key: SESSION_KEY } });
   let existing; const stored = mgr.loadStoredSession();
   if (stored && stored.walletPublicKey) existing = { privateKey: stored.privateKey, secret: stored.secret, walletPublicKey: stored.walletPublicKey };
   const me = { mgr, relay: null, uri: '', qrUri: '', state: existing ? 'connecting' : 'pairing' };
-  const set = (s) => { me.state = s; onChange?.(s, me); };
+  const set = (s) => { me.state = s; for (const f of [...listeners]) { try { f(s, me); } catch { /* one box must not stop the others */ } } };
   const relay = initiateDappRelay(({ client, status }) => {
     mgr.updateConnection(client, status);
     if (status.status === 'reconnecting' || status.status === 'disconnected') { if (me.state === 'ready') set('lost'); }
@@ -30,14 +36,14 @@ export function connect(onChange) {
   mgr.on('walletready', () => set('ready'));
   mgr.on('disconnect', () => { set('pairing'); });
   mgr.on('reconnecting', () => { if (me.state === 'ready') set('lost'); });
-  cur = me; onChange?.(me.state, me);
+  cur = me; for (const f of [...listeners]) { try { f(me.state, me); } catch { /* see above */ } }
   return me;
 }
 
 export function disconnect(clear = true) {
   if (!cur) return;
   const c = cur; cur = null;
-  try { c.mgr.sendDisconnect?.().catch(() => {}); } catch { /* courtesy message only */ }
+  if (clear) { try { c.mgr.sendDisconnect?.().catch(() => {}); } catch { /* courtesy message only, and only when the user ends the session */ } }
   try { c.relay.cleanup(); } catch { /* ignore */ }
-  if (clear) { try { c.mgr.clearStoredSession(); } catch { /* ignore */ } }
+  if (clear) { try { c.mgr.clearStoredSession(); } catch { /* ignore */ } for (const f of [...listeners]) { try { f('pairing', c); } catch { /* ignore */ } } }
 }
