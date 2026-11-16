@@ -59,6 +59,7 @@ Levels are kept separate on purpose.
 - The organizer's key lives in the browser (localStorage). The app offers a backup box; if you lose the key and the browser data, the funds at that stage are locked. One test pact on mainnet is locked this way (30,000 sat, see the evidence file).
 - The "Settled" display is a marker kept per browser. Another browser sees the chain state, not the marker.
 - The silent-organizer path (claim after the event end, then collect after 432 blocks) is the contract design (A3, then C1). It passed regtest and software tests; see the evidence notes for any real-wallet run on mainnet.
+- Time is counted in blocks, not clock time. The dates in the app are estimates (about 10 minutes per block), so the 432-block wait is about 3 days, give or take a few hours.
 - No audit. Contract sources are frozen for the hackathon.
 
 ## Try it
