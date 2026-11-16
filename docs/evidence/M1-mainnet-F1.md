@@ -22,6 +22,7 @@ Date: 2026-11-16 (Istanbul, about 13:35). Network: Bitcoin Cash mainnet.
 - The F1 and A1 paths work on the real network with the Funded and Accepted contracts of this repository.
 
 ## What this does NOT show
+(State at the time of M1. F2 has run since: see M2-mainnet-F2.md.)
 - No other path (F2, A2-A4, C1-C4, D1-D6) has run on mainnet or with a real wallet. A2 and A3 have buttons and software-wallet tests only.
   F2 (cancel) has R-VM / regtest / software-wallet tests and a UI button, but the button has not been used with a real wallet yet.
 - Block-explorer check (3xpl.com, 2026-11-16): all three transactions are confirmed. Funding and F1 accept are in block 977,601; A1 pay is in block 977,604. Sizes/fees: funding 229 B / 234 sat, F1 671 B / 673 sat, A1 860 B / 862 sat.

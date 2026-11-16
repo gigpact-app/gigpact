@@ -10,9 +10,9 @@ This page compares the state at hackathon kick-off (14 November 2026) with the s
 | Wallet | Standalone compatibility experiments with Paytaca and Selene (not part of this repository) | WizardConnect pairing in the app; Paytaca signed the sponsor input of the accept (F1) and pay (A1) transactions |
 | Web app | None | Create a request, fund it with a QR code, accept with a wallet, pay out or take the money back |
 | Mainnet | None | One full run of fund, accept, pay: three confirmed transactions (blocks 977,601 / 977,601 / 977,604) |
-| Tests | None | 222 tests (contract VM, library, web logic) plus regtest tests on a local BCHN node |
-| Paths run with a real wallet on mainnet | None | F1 and A1 only |
-| Paths not yet run with a real wallet | All | F2, A2, A3, C1-C4, D1-D6 (tested on regtest and with a software wallet) |
+| Tests | None | 223 tests (contract VM, library, web logic) plus regtest tests on a local BCHN node |
+| Paths run with a real wallet on mainnet | None | F1, A1 and F2 only |
+| Paths not yet run with a real wallet | All | A2, A3, C1-C4, D1-D6 (tested on regtest and with a software wallet) |
 
 ## What did not change
 
@@ -21,7 +21,7 @@ This page compares the state at hackathon kick-off (14 November 2026) with the s
 
 ## What is still open
 
-- Real-wallet runs of cancel (F2), waive (A2) and claim-after-event (A3).
+- Real-wallet runs of waive (A2) and claim-after-event (A3), then collect (C1). Cancel (F2) has run once: see docs/evidence/M2-mainnet-F2.md.
 - Selene as a wallet is unverified.
 - Disputes use a discarded demo arbiter key and are closed in the UI.
 - No independent audit.
