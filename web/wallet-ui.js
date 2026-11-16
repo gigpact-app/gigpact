@@ -14,7 +14,7 @@ export function walletBox({ onChange, connectLabel = 'Connect wallet to pay the 
     connBtn.hidden = ready || wstate === 'connecting' || !!pairBox;
     discBtn.hidden = !(ready || wstate === 'connecting' || pairBox);
     if (ready && pairBox) { pairBox.remove(); pairBox = null; }
-    onChange?.();
+    queueMicrotask(() => onChange?.()); // never during construction: the caller's own variables are not ready yet
   }
   function onWallet(s, me) {
     wstate = s === 'pairing' ? (pairBox ? 'pairing' : 'idle') : s;
