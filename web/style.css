@@ -168,12 +168,12 @@ header.top { flex-wrap:wrap; gap:12px 32px; padding:24px 0; }
 /* simpler first screen: who it is for, three steps, slim banner */
 .who { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 26px; }
 .who span { border:1px solid var(--line2); border-radius:999px; padding:4px 12px; font-size:.82rem; color:var(--soft); }
-.steps { display:grid; grid-template-columns:repeat(3,1fr); gap:0; border-top:1px solid var(--line); }
-.step { padding:28px 28px 28px 0; }
-.step + .step { padding-left:28px; border-left:1px solid var(--line); }
-.step .sn { font:700 .8rem var(--mono); color:var(--accent); margin-bottom:8px; }
-.step h3 { margin:0 0 6px; font-size:1.25rem; }
-.step p { margin:0; color:var(--mute); font-size:.98rem; }
+.flow3 { display:grid; grid-template-columns:repeat(3,1fr); gap:0; border-top:1px solid var(--line); }
+.flow { padding:28px 28px 28px 0; }
+.flow + .flow { padding-left:28px; border-left:1px solid var(--line); }
+.flow .fln { font:700 .8rem var(--mono); color:var(--accent); margin-bottom:8px; }
+.flow h3 { margin:0 0 6px; font-size:1.25rem; }
+.flow p { margin:0; color:var(--mute); font-size:.98rem; }
 .wrap.wide .banner { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 22px; padding:8px 32px; font-size:.78rem; }
 .wrap.wide .banner > div { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; }
 .wrap.wide .banner b { display:inline; margin:0; }
@@ -181,9 +181,9 @@ header.top { flex-wrap:wrap; gap:12px 32px; padding:24px 0; }
 .wrap.wide .banner .tok { flex-basis:100%; }
 .wrap.wide .banner code { display:inline; font-size:.7rem; margin:0; }
 @media (max-width:640px) {
-  .steps { grid-template-columns:1fr; }
-  .step, .step + .step { padding:16px 0; border-left:0; border-top:1px solid var(--line); }
-  .step:first-child { border-top:0; }
+  .flow3 { grid-template-columns:1fr; }
+  .flow, .flow + .flow { padding:16px 0; border-left:0; border-top:1px solid var(--line); }
+  .flow:first-child { border-top:0; }
   .wrap.wide .banner { padding:8px 20px; }
   .who { margin-bottom:20px; }
 }

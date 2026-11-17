@@ -50,8 +50,8 @@ function homeTop() {
 
 // Three plain steps: the whole idea in one glance.
 function stepsRow() {
-  const st = (n, t, p) => h('div', { class: 'step' }, h('div', { class: 'sn' }, n), h('h3', {}, t), h('p', {}, p));
-  return h('section', { class: 'steps', id: 'steps' },
+  const st = (n, t, p) => h('div', { class: 'flow' }, h('div', { class: 'fln' }, n), h('h3', {}, t), h('p', {}, p));
+  return h('section', { class: 'flow3', id: 'steps' },
     st('1', 'Lock', 'The organizer puts your fee into the pact.'),
     st('2', 'Do the gig', 'You show up. The money waits, nobody can touch it.'),
     st('3', 'Get paid', 'The organizer pays you, or you claim it after the event.'));
