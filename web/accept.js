@@ -30,15 +30,17 @@ const promptName = (s) => String(s).replace(/[<>&"'`]/g, ' ');
 const lockOfPubkey = (pk) => encodeLockingBytecodeP2pkh(hash160(pk));
 const addrOfLock = (lock) => lockingBytecodeToCashAddress({ bytecode: lock, prefix: PREFIX }).address;
 
-// The ONE funding outpoint of this pact (K17). Anything other than exactly one output of exactly F at the funding address
-// is refused here, so a stray payment can never be picked up as "the funding".
+// The ONE funding outpoint of this pact (K17): the single plain output of exactly F at the funding address. Anyone can send a small
+// payment to any address, so other outputs ("strays") are ignored; they can never be picked up as "the funding" and never block
+// the accept. Zero or two or more plain outputs of exactly F are refused (it would be unclear which one is the funding).
 export function declareFromChain(chain, utxos) {
   const F = chain.params.F;
-  const exact = utxos.filter((u) => u.satoshis === F);
   if (utxos.length === 0) throw new UiError('The pact is not funded yet.');
-  if (!(utxos.length === 1 && exact.length === 1)) throw new UiError(`The funding address holds ${utxos.length} outputs (${utxos.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${F} sat is expected, so this pact cannot be accepted automatically.`);
+  const sameValue = utxos.filter((u) => u.satoshis === F);
+  const exact = sameValue.filter((u) => !u.token);
+  if (exact.length === 0 && sameValue.length > 0) throw new UiError('The funding output carries a token, which this pact does not accept.');
+  if (exact.length !== 1) throw new UiError(`The funding address holds ${exact.length} plain output(s) of ${F} sat (all outputs: ${utxos.map((u) => u.satoshis).join(', ')} sat). Exactly one is expected, so this pact cannot be accepted automatically.`);
   const u = exact[0];
-  if (u.token) throw new UiError('The funding output carries a token, which this pact does not accept.');
   const funded = { txid: u.txid, vout: u.vout, satoshis: u.satoshis, lockingBytecode: Uint8Array.from(chain.locks.funded) };
   return { funded, job: declareFunding(newJob(chain), funded) };
 }
@@ -119,7 +121,8 @@ export async function cancelPact({ pact, keyV, mgr, provider, onStep = () => {} 
   onStep('Checking the funding address…');
   const held = await provider.getUtxos(chain.addresses.funded);
   if (held.length === 0) throw new UiError('Nothing is held at the funding address, so there is nothing to take back.');
-  const u = held.find((x) => !x.token);
+  // The pact money first (the plain output of exactly F); a stray or a wrong amount is returned by a later cancel.
+  const u = held.find((x) => !x.token && x.satoshis === chain.params.F) ?? held.find((x) => !x.token);
   if (!u) throw new UiError('The only output at the funding address carries a token. This app does not move tokens.');
   const utxo = { txid: u.txid, vout: u.vout, satoshis: u.satoshis, lockingBytecode: Uint8Array.from(chain.locks.funded) };
   const { derive, changeLock, sponsors } = await findSponsors({ mgr, provider, onStep });

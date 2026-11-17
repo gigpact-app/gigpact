@@ -104,3 +104,13 @@ test('wallet box: a stored session the wallet never answers ends in an explanati
   await new Promise((r) => setTimeout(r, 60));
   assert.equal(ok.textContent, 'Connected to Paytaca.');
 });
+
+test('routes: trailing punctuation is stripped, unknown or empty paths fall back to the start page (no stuck "Loading...")', async () => {
+  const { normalizeHash } = await import('../web/route.js');
+  const ok = (raw, hash) => assert.deepEqual(normalizeHash(raw), { hash, valid: true }, raw);
+  const no = (raw) => assert.deepEqual(normalizeHash(raw), { hash: '/', valid: false }, raw);
+  ok('', '/'); ok('#', '/'); ok('#/', '/'); ok('#/new', '/new'); ok('#/new.', '/new');
+  ok('#/pact/abc_DEF-123', '/pact/abc_DEF-123');
+  ok('#/pact/abc.', '/pact/abc'); ok('#/pact/abc),', '/pact/abc'); ok('#/pact/abc?!', '/pact/abc'); ok('#/pact/abc\u201d', '/pact/abc');
+  no('#/pact/'); no('#/pact/.'); no('#/foo'); no('#/pact/a b'); no('#/pact/a/b'); no('#/pact/<script>');
+});

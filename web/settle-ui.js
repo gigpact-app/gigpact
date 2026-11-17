@@ -11,7 +11,7 @@ const ACTIONS = {
   accepted: {
     organizer: [{ path: 'A1', label: 'Pay the worker now', help: (p) => `Releases the money to the worker's payout address ${addressOf(p.lockW)}. Use it when the work is done.` }],
     worker: [
-      { path: 'A3', label: 'Claim the pay (after the event ends)', help: (p) => `Possible once the chain has reached block ${p.tEnd}. It moves the money to the claim stage.` },
+      { path: 'A3', label: 'Claim the pay (after the event ends)', help: (p) => `Possible once the chain has reached block ${p.tEnd}. Do it within 7 days (1008 blocks, until block ${p.tEnd + 1008}): after that the organizer can open a dispute that ends 50/50 by default. It moves the money to the claim stage.` },
       { path: 'A2', label: 'Waive: give the money back', help: (p) => `Returns the money to the organizer's refund address ${addressOf(p.lockV)}.`, ghost: true },
     ],
   },
@@ -25,7 +25,7 @@ const ACTIONS = {
   },
 };
 const STAT = {
-  accepted: { organizer: 'The worker accepted. When the work is done, pay the worker from here.', worker: 'You accepted. Later you can claim the pay here.' },
+  accepted: { organizer: 'The worker accepted. When the work is done, pay the worker from here.', worker: 'You accepted. After the event ends, claim the pay here within 7 days.' },
   requested: { organizer: 'The worker claimed the pay after the event. You can still pay now. Otherwise the worker can collect after the waiting period.', worker: 'You claimed the pay. The money waits at the claim stage. When the waiting period is over you can collect it here.', viewer: 'The worker claimed the pay after the event. Once the waiting period is over, anyone can trigger the payout from here. The money can only go to the worker.' },
 };
 

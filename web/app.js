@@ -40,7 +40,7 @@ function pass(p, { state, stateClass, eta, seed }) {
     h('div', { class: 'amt' }, `${fmtBch(p.F)} BCH`, h('small', {}, `${p.F} sat`)),
     h('div', { class: 'meta' },
       h('div', {}, 'Worker is paid after ', h('span', { class: 'eta' }, eta ?? `block ${p.tEnd}`)),
-      h('div', {}, 'Payout to ', h('code', {}, addressOf(p.lockW).replace(/^[a-z]+:/, '').slice(0, 10) + '…'))),
+      h('div', {}, 'Payout to ', h('code', { class: 'full' }, addressOf(p.lockW).replace(/^[a-z]+:/, '')))),
     h('div', { class: 'tear' }),
     stripeFor(seed ?? p.name + p.F), 
     h('div', { style: 'margin-top:12px' }, h('span', { class: `state ${stateClass ?? ''}` }, state)));
@@ -73,7 +73,7 @@ function newPact() {
   const form = h('form', { class: 'card', novalidate: true },
     h('label', { for: 'name' }, 'What is the gig?'), f.name,
     h('label', { for: 'fee' }, 'Your fee (BCH)'), f.fee, usd,
-    h('label', { for: 'end' }, 'When does the event end?'), h('div', { class: 'chips' }, ...chips), f.end, h('div', { class: 'hint' }, 'You can claim your fee after this time.'),
+    h('label', { for: 'end' }, 'When does the event end?'), h('div', { class: 'chips' }, ...chips), f.end, h('div', { class: 'hint' }, 'You can claim your fee after this time, and you have 7 days to do it.'),
     h('label', { for: 'addr' }, 'Your BCH address (where the money goes)'), f.addr,
     err, h('div', { class: 'row' }, btn));
   form.addEventListener('submit', async (e) => {
@@ -154,7 +154,7 @@ async function pactScreen(code) {
     const addr = h('input', { id: 'refund', placeholder: `${NET === 'mainnet' ? 'bitcoincash:q…' : 'bchtest:q…'}`, autocomplete: 'off', spellcheck: 'false' });
     const btn = h('button', { class: 'btn', type: 'submit' }, 'Get the funding address');
     const form = h('form', { class: 'card', novalidate: true },
-      h('h2', {}, 'You are the organizer'), h('p', { class: 'sub' }, 'Pay the fee into this pact before the gig. If the worker never accepts, you can take it back.'),
+      h('h2', {}, 'You are the organizer'), h('p', { class: 'sub' }, 'Pay the fee into this pact before the gig. If the worker never accepts, you can take it back. Before you pay, check with the worker, by another channel, that the payout address on the card is theirs.'),
       h('label', { for: 'refund' }, 'Your refund address (BCH)'), addr, h('div', { class: 'hint' }, 'If the pact is cancelled or settled in your favour, the money returns here.'), err, h('div', { class: 'row' }, btn));
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); err.textContent = '';
@@ -213,8 +213,7 @@ async function pactScreen(code) {
       if (claimed) { setState('Claimed', 'ok', `The worker claimed the pay after the event. The money waits at the claim stage (${rx[0].txid}:${rx[0].vout}). After 432 blocks (about 3 days) it can be collected.`); wp?.setFunded(false, true); fundGone(true); return; }
       if (acceptedNow) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${ax[0].txid}:${ax[0].vout}`); wp?.setFunded(false, true); fundGone(true); return; }
       if (ax.length || rx.length || dx) { setState('Past the funded stage', 'warn', 'This pact has moved on to a stage this build does not show.'); wp?.setFunded(false); fundGone(false); return; }
-      const exact = us.filter((u) => u.satoshis === p.F);
-      if (exact.length === 1 && us.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${exact[0].txid}:${exact[0].vout}`); wp?.setFunded(true); fundGone(false); }
+      if (fx.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${fx[0].txid}:${fx[0].vout}${us.length > 1 ? ` (${us.length - 1} other small output(s) at the address are ignored)` : ''}`); wp?.setFunded(true); fundGone(false); }
       else if (us.length === 0 && doneMark()) { const d = doneMark(); if (d.path === 'F2') setState('Cancelled', 'warn', `The organizer cancelled before the worker accepted. The money went back to ${d.to}. Transaction ${d.txid}. Do not pay this pact again.`); else setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true); fundGone(true); return; }
       else if (us.length === 0) {
         const used = await everUsed(chain.locks.funded);

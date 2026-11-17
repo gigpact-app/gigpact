@@ -61,12 +61,34 @@ test('accept: smallest sufficient single coin is chosen; two coins are used only
   assert.equal(tx.inputs.length, 3);
 });
 
-test('accept: refuses before asking the wallet when the pact is not exactly funded', async () => {
-  for (const [funded, re] of [[[], /not funded/], [[{ txid: T(11), vout: 0, satoshis: 99999n }], /Exactly one output of 100000 sat/], [[{ txid: T(11), vout: 0, satoshis: 100000n }, { txid: T(12), vout: 0, satoshis: 5000n }], /2 outputs/], [[{ txid: T(11), vout: 0, satoshis: 100000n }, { txid: T(12), vout: 0, satoshis: 100000n }], /2 outputs/]]) {
+test('accept: refuses before asking the wallet when there is no single plain output of exactly F', async () => {
+  for (const [funded, re] of [[[], /not funded/], [[{ txid: T(11), vout: 0, satoshis: 99999n }], /holds 0 plain output\(s\) of 100000 sat/], [[{ txid: T(11), vout: 0, satoshis: 100000n }, { txid: T(12), vout: 0, satoshis: 100000n }], /holds 2 plain output\(s\)/], [[{ txid: T(11), vout: 0, satoshis: 99999n }, { txid: T(12), vout: 0, satoshis: 5000n }], /holds 0 plain output\(s\)/]]) {
     const { p, sent } = net({ funded }); const m = mgr(); let asked = false; m.signTransaction = async () => { asked = true; };
     await bad(acceptPact({ pact, keyW: kW, mgr: m, provider: p }), re);
     assert.equal(asked, false); assert.equal(sent.length, 0);
   }
+});
+
+test('accept: a stray small payment (or a token output) at the funding address is ignored, the accept spends exactly the funding outpoint', async () => {
+  const stray = { txid: T(12), vout: 0, satoshis: 546n };
+  const tokenStray = { txid: T(13), vout: 1, satoshis: 800n, token: { category: 'aa'.repeat(32), amount: 1n } };
+  for (const funded of [[stray, { txid: T(11), vout: 0, satoshis: 100000n }], [{ txid: T(11), vout: 0, satoshis: 100000n }, stray, tokenStray]]) {
+    const { p, sent } = net({ funded });
+    await acceptPact({ pact, keyW: kW, mgr: mgr(), provider: p });
+    assert.equal(sent.length, 1);
+    const tx = decodeTransactionBch(hexToBin(sent[0]));
+    assert.equal(binToHex(tx.inputs[0].outpointTransactionHash), T(11), 'input 0 is the funding outpoint, not a stray');
+    assert.equal(tx.inputs[0].outpointIndex, 0);
+    assert.equal(tx.outputs[0].valueSatoshis, 100000n);
+  }
+});
+
+test('cancel (F2): with a stray next to the funding, the funding output is returned first', async () => {
+  const { p, sent } = net({ funded: [{ txid: T(12), vout: 0, satoshis: 546n }, { txid: T(11), vout: 0, satoshis: 100000n }] });
+  await cancelPact({ pact, keyV: kV, mgr: mgr(), provider: p });
+  const tx = decodeTransactionBch(hexToBin(sent[0]));
+  assert.equal(binToHex(tx.inputs[0].outpointTransactionHash), T(11));
+  assert.equal(tx.outputs[0].valueSatoshis, 100000n);
 });
 
 test('accept: wallet without enough coins -> plain message, wallet never asked', async () => {

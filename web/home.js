@@ -54,7 +54,7 @@ function stepsRow() {
   return h('section', { class: 'flow3', id: 'steps' },
     st('1', 'Lock', 'The organizer puts your fee into the pact.'),
     st('2', 'Do the gig', 'You show up. The money waits in the pact until the event ends.'),
-    st('3', 'Get paid', 'Work done: the organizer pays you, or you claim after the event. Work not done: the organizer objects and an arbiter decides.'));
+    st('3', 'Get paid', 'The organizer pays you, or you claim after the event, within 7 days. If the organizer objects, a time-based fallback decides: no arbiter is connected yet.'));
 }
 
 // The example pact on the hero: an illustration of the four cues, not a live pact.
@@ -63,7 +63,7 @@ function cueCard() {
     ['Q1', 'Lock', 'The organizer locks the fee into the pact.', 'DONE', 'ok'],
     ['Q2', 'Accept', 'You accept with your wallet. The organizer can no longer cancel.', 'DONE', 'ok'],
     ['Q3', 'Show', 'You play. The fee waits in the pact.', 'STANDBY', 'warn'],
-    ['Q4', 'Paid', 'The organizer pays, or you claim after the event end.', 'WAITING', 'idle'],
+    ['Q4', 'Paid', 'The organizer pays, or you claim after the event end (within 7 days).', 'WAITING', 'idle'],
   ];
   return h('div', { class: 'cuecard', 'aria-label': 'Example pact' },
     h('div', { class: 'cuehead' }, h('div', {}, h('div', { class: 'k' }, 'EXAMPLE PACT'), h('div', { class: 'cname' }, 'Saturday event, Main Hall')), h('div', { class: 'camt' }, '0.002 BCH')),
@@ -83,12 +83,12 @@ function quietSection() {
   const col = (k, t, p) => h('div', { class: 'qcol' }, h('i'), h('div', { class: 'k' }, k), h('h3', {}, t), h('p', {}, p));
   return h('section', { class: 'sec', id: 'how' },
     h('div', { class: 'eyebrow' }, 'IF THE ORGANIZER GOES QUIET'),
-    h('h2', { class: 'big' }, 'Silence does not stop you from being paid.'),
+    h('h2', { class: 'big' }, 'If the organizer goes quiet, you can still be paid.'),
     h('div', { class: 'qrow' },
-      col('EVENT ENDS', 'You claim', 'After the event end you press Claim. The pact checks the block height, not anyone’s word.'),
-      col('432 BLOCKS · ABOUT 3 DAYS', 'Waiting period', 'A short window in which the organizer can pay you at once, or object.'),
-      col('THEN', 'You collect', 'No signature from the organizer is needed. The fee goes to your payout address.')),
-    h('p', { class: 'note' }, 'The claim and the organizer’s answers (pay now, waive) have run on mainnet. Collecting after the 432 blocks is still being tested.'));
+      col('EVENT ENDS · WITHIN 7 DAYS', 'You claim', 'After the event end you press Claim, and you need to do it within 7 days. The pact checks the block height, not anyone’s word.'),
+      col('432 BLOCKS · ABOUT 3 DAYS', 'Waiting period', 'A window in which the organizer can pay you at once, or object.'),
+      col('THEN', 'You collect', 'If nobody objects, no signature from the organizer is needed. The fee goes to your payout address.')),
+    h('p', { class: 'note' }, 'The claim and the organizer’s answers (pay now, waive) have run on mainnet. Collecting after the 432 blocks is still being tested. If you do not claim within 7 days after the event end, the organizer can open a dispute that ends 50/50 by default.'));
 }
 
 function problemSection() {
@@ -98,9 +98,9 @@ function problemSection() {
     h('h2', { class: 'big' }, 'The organizer is protected too.'),
     h('div', { class: 'qrow' },
       col('BEFORE YOU ACCEPT', 'Take it back', 'Until the worker accepts, the organizer can cancel and get the whole fee back.'),
-      col('AFTER THE EVENT', 'Pay, or object', 'If the work was not delivered, the organizer objects instead of paying. The money moves into a dispute.'),
-      col('THEN', 'A neutral arbiter decides', 'Worker, organizer or a split. If nobody decides in time, a fallback pays the worker.')),
-    h('p', { class: 'note' }, 'Cancel, claim and waive have run on mainnet. The dispute steps are in the contracts and pass tests on a local test chain, but this prototype does not offer them in the app yet: no real arbiter is connected.'));
+      col('AFTER THE EVENT', 'Pay, or object', 'If the work was not delivered, the organizer can object instead of paying. The money moves into a dispute.'),
+      col('THEN', 'Arbiter, then a fallback', 'In the design an arbiter decides: worker, organizer or a split. If nobody decides in time (about 14 days), a fallback pays the worker in full after an objection, or splits 50/50 after a late dispute.')),
+    h('p', { class: 'note' }, 'Cancel, claim and waive have run on mainnet. The dispute steps are in the contracts and pass tests on a local test chain, but this prototype does not offer them in the app yet. No real arbiter is connected, so today every dispute would end by the time-based fallback.'));
 }
 
 function vision() {
@@ -121,7 +121,7 @@ export function renderHome(app) {
     h('section', { class: 'hero' },
       h('div', { class: 'herotext' },
         h('h1', {}, 'Your fee, ', h('em', {}, 'locked before the gig.')),
-        h('p', { class: 'lead' }, 'The organizer locks your pay on Bitcoin Cash. Do the work and you are paid. If there is a dispute, a neutral arbiter decides.'),
+        h('p', { class: 'lead' }, 'The organizer locks your pay on Bitcoin Cash before the gig. Do the work, claim after the event, and the contract pays you by fixed rules, not by trust. Dispute resolution is not live in this prototype.'),
         h('div', { class: 'who' }, ...['Musicians', 'Sound & light', 'Stage crew', 'Catering', 'Photo & video'].map((t) => h('span', {}, t))),
         h('div', { class: 'ctas' }, link('#/new', 'Create a pact', 'btn'), seeRun),
         h('p', { class: 'tagline' }, 'Built for musicians first. Made for every gig.')),

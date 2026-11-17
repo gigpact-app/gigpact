@@ -200,3 +200,4 @@ header.top { flex-wrap:wrap; gap:12px 32px; padding:24px 0; }
   .wrap.wide .banner .tok .btn { padding:2px 8px; font-size:.68rem; margin:0; }
   .topnav .navlink { display:none; }
 }
+.pass .meta code.full { display:block; overflow-wrap:anywhere; word-break:break-all; font-size:.78rem; line-height:1.35; }
