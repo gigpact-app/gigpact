@@ -1,7 +1,9 @@
-// Network access (Electrum over WebSocket via CashScript's provider). Read-only here: tip height and UTXOs.
+// Network access (Electrum over WebSocket via CashScript's provider). Read-only here: tip height and UTXOs; the broadcast goes
+// through the same object. Mainnet uses two public Electrum servers with failover (see failover.js).
 import { ElectrumNetworkProvider } from 'cashscript';
 import { NET } from './config.js';
-export const provider = new ElectrumNetworkProvider(NET);
-const withTimeout = (p, ms = 8000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('The network did not answer in time.')), ms))]);
-export const tip = () => withTimeout(provider.getBlockHeight());
-export const utxosAt = (address) => withTimeout(provider.getUtxos(address));
+import { failoverProvider } from './failover.js';
+const HOSTS = NET === 'mainnet' ? ['bch.imaginary.cash', 'bitcoincash.network'] : [null];
+export const provider = failoverProvider(HOSTS.map((hostname) => new ElectrumNetworkProvider(NET, hostname ? { hostname } : {})));
+export const tip = () => provider.getBlockHeight();
+export const utxosAt = (address) => provider.getUtxos(address);
