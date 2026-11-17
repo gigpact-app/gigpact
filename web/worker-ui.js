@@ -105,7 +105,7 @@ export function workerPanel({ pact, keyW, onDone }) {
   el.append(h('h2', {}, 'You are the worker'), stat,
     h('div', { class: 'row' }, connBtn, discBtn), slot, stepEl, checkEl, finderBox, err,
     h('div', { class: 'row' }, accBtn),
-    h('p', { class: 'note' }, 'Accepting costs only the network fee (a few hundred satoshi), paid from your wallet. The pact money stays in the pact; no one can take it outside the pact rules.'));
+    h('p', { class: 'note' }, 'Accepting costs only the network fee (a few hundred satoshi), paid from your wallet. The pact money stays in the pact; no one can take it outside the pact rules. The connected wallet needs a small balance of its own to cover that fee: about 0.00004 BCH (a few thousand satoshi) is enough.'));
   if (hasStoredWallet()) { wstate = 'connecting'; connect(onWallet); }
   render();
   return { el, setFunded(f, acc) { funded = !!f; if (acc) accepted = true; render(); } };

@@ -9,6 +9,7 @@ import { cancelPanel } from './cancel-ui.js';
 import { settlePanel } from './settle-ui.js';
 import { qrSvg } from './dom.js';
 import { qrFor, resetWalletListeners } from './wallet.js';
+import { confirmedFrom } from './confirm.js';
 
 const app = document.getElementById('app');
 let timers = [];
@@ -193,12 +194,14 @@ async function pactScreen(code) {
   const doneKey = `gigpact.done.${pactId(code)}`;
   const doneMark = () => { try { return JSON.parse(localStorage.getItem(doneKey) || 'null'); } catch { return null; } };
   const markDone = (r) => { try { localStorage.setItem(doneKey, JSON.stringify({ path: r.path, txid: r.txid, to: r.to })); } catch { /* display only */ } };
-  let wp = null, cp = null, sp = null, sp2 = null;
+  let wp = null, cp = null, sp = null, sp2 = null, kb = null;
   // The funding box (address + copy button) is only useful before the money moved on; after that it could lead to a second payment.
   function fundGone(gone) { if (role === 'organizer') roleBox.hidden = gone; }
+  // Once the pact is finished (settled, cancelled, or the address already used) the organizer key has nothing left to protect.
+  const keyDone = (done) => { if (kb) kb.hidden = done; };
   async function refresh() {
     try {
-      payBox.hidden = true;
+      payBox.hidden = true; keyDone(false);
       const A = chain.addresses;
       const [us, acc, later] = await Promise.all([utxosAt(A.funded), utxosAt(A.accepted), Promise.all([A.requested, A.d100, A.d50].map((a) => utxosAt(a)))]);
       cp?.setHeld(us);
@@ -213,12 +216,17 @@ async function pactScreen(code) {
       if (claimed) { setState('Claimed', 'ok', `The worker claimed the pay after the event. The money waits at the claim stage (${rx[0].txid}:${rx[0].vout}). After 432 blocks (about 3 days) it can be collected.`); wp?.setFunded(false, true); fundGone(true); return; }
       if (acceptedNow) { setState('Accepted', 'ok', `The worker accepted. Pact money is locked at ${ax[0].txid}:${ax[0].vout}`); wp?.setFunded(false, true); fundGone(true); return; }
       if (ax.length || rx.length || dx) { setState('Past the funded stage', 'warn', 'This pact has moved on to a stage this build does not show.'); wp?.setFunded(false); fundGone(false); return; }
-      if (fx.length === 1) { setState('Funded', 'ok', `Funding found on chain: ${fx[0].txid}:${fx[0].vout}${us.length > 1 ? ` (${us.length - 1} other small output(s) at the address are ignored)` : ''}`); wp?.setFunded(true); fundGone(false); }
-      else if (us.length === 0 && doneMark()) { const d = doneMark(); if (d.path === 'F2') setState('Cancelled', 'warn', `The organizer cancelled before the worker accepted. The money went back to ${d.to}. Transaction ${d.txid}. Do not pay this pact again.`); else setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true); fundGone(true); return; }
+      if (fx.length === 1) {
+        // Accept spends the funding output; a worker who accepts on a 0-conf funding could be fooled by a replaced payment. Wait for 1 confirmation.
+        let conf = null; try { conf = confirmedFrom(await provider.performRequest('blockchain.scripthash.listunspent', binToHex(sha256.hash(chain.locks.funded).reverse())), fx[0].txid, fx[0].vout); } catch { conf = null; }
+        if (conf === false) { setState('Waiting for 1 confirmation', 'warn', `The funding payment is on the network (${fx[0].txid}:${fx[0].vout}) but not in a block yet. The worker can accept after the first confirmation, usually within about 10 minutes.`); wp?.setFunded(false); fundGone(false); return; }
+        setState('Funded', 'ok', `Funding found on chain: ${fx[0].txid}:${fx[0].vout}${us.length > 1 ? ` (${us.length - 1} other small output(s) at the address are ignored)` : ''}`); wp?.setFunded(true); fundGone(false);
+      }
+      else if (us.length === 0 && doneMark()) { const d = doneMark(); if (d.path === 'F2') setState('Cancelled', 'warn', `The organizer cancelled before the worker accepted. The money went back to ${d.to}. Transaction ${d.txid}. Do not pay this pact again.`); else setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true); fundGone(true); keyDone(true); return; }
       else if (us.length === 0) {
         const used = await everUsed(chain.locks.funded);
         if (used === false) { setState('Waiting for funding', 'warn', 'Nothing has arrived at the funding address yet.'); wp?.setFunded(false); fundGone(false); payBox.hidden = false; return; }
-        if (used === true) { setState('Already used', 'warn', 'Money already passed through this pact address and none is left in it. Do not pay it again. Create a new pact for a new gig.'); wp?.setFunded(false, true); fundGone(true); return; }
+        if (used === true) { setState('Already used', 'warn', 'Money already passed through this pact address and none is left in it. Do not pay it again. Create a new pact for a new gig.'); wp?.setFunded(false, true); fundGone(true); keyDone(true); return; }
         setState('Waiting for funding', 'warn', 'Nothing was found at the funding address. The history could not be checked, so the pay box is hidden.'); wp?.setFunded(false); fundGone(false); return;
       }
       else { setState('Funding needs a look', 'bad', `Found ${us.length} output(s) at the address (${us.map((u) => u.satoshis).join(', ')} sat). Exactly one output of ${p.F} sat is expected.`); wp?.setFunded(false); fundGone(false); }
@@ -264,7 +272,7 @@ async function pactScreen(code) {
   if (role !== 'viewer') sp = settlePanel({ pact: p, role, key: rk, onDone: finished });
   sp2 = settlePanel({ pact: p, role, stage: 'requested', key: rk, onDone: finished });
   if (role === 'organizer') cp = cancelPanel({ pact: p, keyV: hexToBin(mineV.sk), onDone: (r) => { if (r?.txid) markDone({ path: 'F2', txid: r.txid, to: r.refundTo }); refresh(); } });
-  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el] : []), sp2.el, ...(cp ? [keyBox(), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
+  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el] : []), sp2.el, ...(cp ? [(kb = keyBox()), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
     h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…')), payBox), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
   fillEta(); refresh(); timers.push(setInterval(refresh, 20000));
 }

@@ -5,6 +5,7 @@ GigPact is built by one person (Ozan Turan, GitHub `Oziman13`) for BCH BLAZE 202
 ## What existed before kick-off (14 November 2026)
 
 - **Architecture planning and documentation** for a payment guarantee for live-event workers on Bitcoin Cash (roles, states, the idea of spend paths, parameters).
+  - This planning material is not part of the repository and is not offered as evidence of anything. Everything that is judged here (contracts, app, tests, documents) was written after kick-off and can be checked in the git history.
 - **Standalone technical compatibility experiments** to learn whether the planned approach was possible: CashScript, and WizardConnect pairing/signing with Paytaca and Selene.
   - These were throwaway test scripts, not a product.
   - **They are not copied into this repository.** No code from them is in the submission.
@@ -28,4 +29,4 @@ Everything in this repository: the four CashScript contracts, the transaction li
 
 ## What is not claimed
 
-See the "What is tested" table in the README. In short: only the accept (F1), pay (A1), cancel (F2), claim-after-event (A3), waive after accepting (A2), organizer pays at the claim stage (C3) and waive at the claim stage (C4) paths have run with a real wallet on mainnet (docs/evidence/M1 to M6), by one tester playing both roles.
+See the "What is tested" table in the README. In short: only the accept (F1), pay (A1), cancel (F2), claim-after-event (A3), waive after accepting (A2), organizer pays at the claim stage (C3) and waive at the claim stage (C4) paths have run with a real wallet on mainnet (docs/evidence/M1 to M6), by one tester playing both roles. With Selene (17 November, docs/evidence/M7) the fund, accept (F1) and pay (A1) paths have run, again with both roles played by one tester.
