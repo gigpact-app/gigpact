@@ -53,16 +53,16 @@ function stepsRow() {
   const st = (n, t, p) => h('div', { class: 'flow' }, h('div', { class: 'fln' }, n), h('h3', {}, t), h('p', {}, p));
   return h('section', { class: 'flow3', id: 'steps' },
     st('1', 'Lock', 'The organizer puts your fee into the pact.'),
-    st('2', 'Do the gig', 'You show up. The money waits, nobody can touch it.'),
-    st('3', 'Get paid', 'The organizer pays you, or you claim it after the event.'));
+    st('2', 'Do the gig', 'You show up. The money waits in the pact until the event ends.'),
+    st('3', 'Get paid', 'Work done: the organizer pays you, or you claim after the event. Work not done: the organizer objects and an arbiter decides.'));
 }
 
 // The example pact on the hero: an illustration of the four cues, not a live pact.
 function cueCard() {
   const cues = [
     ['Q1', 'Lock', 'The organizer locks the fee into the pact.', 'DONE', 'ok'],
-    ['Q2', 'Accept', 'You accept with your wallet. The money is bound to you.', 'DONE', 'ok'],
-    ['Q3', 'Show', 'You play. The fee waits, untouchable.', 'STANDBY', 'warn'],
+    ['Q2', 'Accept', 'You accept with your wallet. The organizer can no longer cancel.', 'DONE', 'ok'],
+    ['Q3', 'Show', 'You play. The fee waits in the pact.', 'STANDBY', 'warn'],
     ['Q4', 'Paid', 'The organizer pays, or you claim after the event end.', 'WAITING', 'idle'],
   ];
   return h('div', { class: 'cuecard', 'aria-label': 'Example pact' },
@@ -121,12 +121,12 @@ export function renderHome(app) {
     h('section', { class: 'hero' },
       h('div', { class: 'herotext' },
         h('h1', {}, 'Your fee, ', h('em', {}, 'locked before the gig.')),
-        h('p', { class: 'lead' }, 'The organizer locks your pay on Bitcoin Cash. When the event ends, it is yours.'),
+        h('p', { class: 'lead' }, 'The organizer locks your pay on Bitcoin Cash. Do the work and you are paid. If there is a dispute, a neutral arbiter decides.'),
         h('div', { class: 'who' }, ...['Musicians', 'Sound & light', 'Stage crew', 'Catering', 'Photo & video'].map((t) => h('span', {}, t))),
         h('div', { class: 'ctas' }, link('#/new', 'Create a pact', 'btn'), seeRun),
         h('p', { class: 'tagline' }, 'Built for musicians first. Made for every gig.')),
       cueCard()),
-    stepsRow(), factsRow(), quietSection(), problemSection(), proofSection(), vision(),
+    stepsRow(), problemSection(), quietSection(), factsRow(), proofSection(), vision(),
     h('footer', { class: 'foot' },
       h('div', {}, h('b', {}, 'GigPact'), h('p', {}, 'Prototype on Bitcoin Cash mainnet, built solo for BCH BLAZE 2026. Collecting after the 3-day waiting period and the dispute steps are still being tested. Use small amounts. No independent audit. Built and tested for gigs only; the wider sectors are our vision.')),
       h('div', { class: 'flinks' }, ...[[REPO_URL, 'Source on GitHub'], [DECLARATION_URL, 'Declaration'], [BEFORE_AFTER_URL, 'Before / After']].map(([u, t]) => h('a', { href: u, target: '_blank', rel: 'noopener noreferrer' }, t))))));
