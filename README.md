@@ -11,6 +11,16 @@ Built solo for BCH BLAZE 2026 (DoraHacks). Prototype on Bitcoin Cash **mainnet**
 - Pre-hackathon declaration: [docs/DECLARATION.md](docs/DECLARATION.md)
 - Before / After: [docs/BEFORE-AFTER.md](docs/BEFORE-AFTER.md)
 
+## Judges: try it in 2 minutes
+
+You need a Bitcoin Cash wallet with WizardConnect (Paytaca or Selene) and about 0.0001 BCH (the minimum fee is 10,000 sat) plus a few hundred sat for network fees. Use small amounts only.
+
+1. Open the [live app](https://gigpact-app.github.io/gigpact/) and press *Create*. Answer the four questions (fee 0.0001 BCH). You get a link for the organizer.
+2. Open that link in a private window (a second person, in real use). Send exactly the fee to the address shown.
+3. Either take the money back (*Cancel and take the money back*, available until the worker accepts), or go back to the worker window, connect your wallet and press *Accept*, then press *Pay the worker now* in the organizer window.
+
+Keep both windows open until you are done: each role's key lives in its own browser window, and clearing site data loses it. Every step shows its transaction id. The dispute steps (objection and arbiter) are in the contracts and tests but not in the app yet; see the honest limits below.
+
 ## Vision
 
 **Built for musicians first. Made for every gig.**

@@ -27,7 +27,7 @@ export function walletBox({ onChange, connectLabel = 'Connect wallet to pay the 
     const copyBtn = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy connection link');
     copyBtn.addEventListener('click', () => copy(me.uri, copyBtn));
     pairBox = h('div', { class: 'pairing' },
-      h('p', { class: 'note' }, 'In Paytaca open the WizardConnect menu ("Initiate new WizardConnect session") and scan this code:'),
+      h('p', { class: 'note' }, 'Open the WizardConnect menu in your wallet and scan this code. Paytaca: "Initiate new WizardConnect session". Selene: Wallet > Wallet tools > WizardConnect.'),
       h('div', { class: 'qr' }, qrSvg(qrFor(me.qrUri))),
       h('div', { class: 'row' }, copyBtn, h('a', { class: 'btn small ghost', href: me.uri }, 'Open in wallet app')),
       h('p', { class: 'note' }, 'The code only sets up an encrypted channel. Your wallet will ask you before anything is signed.'));
