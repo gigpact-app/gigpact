@@ -83,12 +83,24 @@ function quietSection() {
   const col = (k, t, p) => h('div', { class: 'qcol' }, h('i'), h('div', { class: 'k' }, k), h('h3', {}, t), h('p', {}, p));
   return h('section', { class: 'sec', id: 'how' },
     h('div', { class: 'eyebrow' }, 'IF THE ORGANIZER GOES QUIET'),
-    h('h2', { class: 'big' }, 'You never need anyone’s permission to be paid.'),
+    h('h2', { class: 'big' }, 'Silence does not stop you from being paid.'),
     h('div', { class: 'qrow' },
       col('EVENT ENDS', 'You claim', 'After the event end you press Claim. The pact checks the block height, not anyone’s word.'),
-      col('432 BLOCKS · ABOUT 3 DAYS', 'Waiting period', 'A short window in which the organizer can still pay you at once.'),
+      col('432 BLOCKS · ABOUT 3 DAYS', 'Waiting period', 'A short window in which the organizer can pay you at once, or object.'),
       col('THEN', 'You collect', 'No signature from the organizer is needed. The fee goes to your payout address.')),
     h('p', { class: 'note' }, 'The claim and the organizer’s answers (pay now, waive) have run on mainnet. Collecting after the 432 blocks is still being tested.'));
+}
+
+function problemSection() {
+  const col = (k, t, p) => h('div', { class: 'qcol' }, h('i'), h('div', { class: 'k' }, k), h('h3', {}, t), h('p', {}, p));
+  return h('section', { class: 'sec', id: 'problem' },
+    h('div', { class: 'eyebrow' }, 'IF SOMETHING GOES WRONG'),
+    h('h2', { class: 'big' }, 'The organizer is protected too.'),
+    h('div', { class: 'qrow' },
+      col('BEFORE YOU ACCEPT', 'Take it back', 'Until the worker accepts, the organizer can cancel and get the whole fee back.'),
+      col('AFTER THE EVENT', 'Pay, or object', 'If the work was not delivered, the organizer objects instead of paying. The money moves into a dispute.'),
+      col('THEN', 'A neutral arbiter decides', 'Worker, organizer or a split. If nobody decides in time, a fallback pays the worker.')),
+    h('p', { class: 'note' }, 'Cancel, claim and waive have run on mainnet. The dispute steps are in the contracts and pass tests on a local test chain, but this prototype does not offer them in the app yet: no real arbiter is connected.'));
 }
 
 function vision() {
@@ -114,7 +126,7 @@ export function renderHome(app) {
         h('div', { class: 'ctas' }, link('#/new', 'Create a pact', 'btn'), seeRun),
         h('p', { class: 'tagline' }, 'Built for musicians first. Made for every gig.')),
       cueCard()),
-    stepsRow(), factsRow(), quietSection(), proofSection(), vision(),
+    stepsRow(), factsRow(), quietSection(), problemSection(), proofSection(), vision(),
     h('footer', { class: 'foot' },
       h('div', {}, h('b', {}, 'GigPact'), h('p', {}, 'Prototype on Bitcoin Cash mainnet, built solo for BCH BLAZE 2026. Collecting after the 3-day waiting period and the dispute steps are still being tested. Use small amounts. No independent audit. Built and tested for gigs only; the wider sectors are our vision.')),
       h('div', { class: 'flinks' }, ...[[REPO_URL, 'Source on GitHub'], [DECLARATION_URL, 'Declaration'], [BEFORE_AFTER_URL, 'Before / After']].map(([u, t]) => h('a', { href: u, target: '_blank', rel: 'noopener noreferrer' }, t))))));
