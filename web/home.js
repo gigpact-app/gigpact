@@ -25,7 +25,7 @@ function proofSection() {
   return h('section', { class: 'sec', id: 'proof' },
     h('div', { class: 'eyebrow' }, 'REAL RUN · BITCOIN CASH MAINNET · 16 NOV 2026'),
     h('h2', { class: 'big' }, 'Not a simulation.'),
-    h('p', { class: 'sub wide' }, 'Real transactions with a tiny test amount, signed by a real wallet. One tester played both roles, worker and organizer, with one wallet. Check each one in a block explorer.'),
+    h('p', { class: 'sub wide' }, 'Real transactions, tiny test amount, one tester playing both roles. Check each one in a block explorer.'),
     h('div', { class: 'ptable' }, ...rows));
 }
 
@@ -48,6 +48,15 @@ function homeTop() {
     h('nav', { class: 'topnav' }, nav('how', 'How it works'), nav('proof', 'Proof on mainnet'), nav('vision', 'Vision'), h('span', { class: 'chip' }, `Prototype · ${NET}`)));
 }
 
+// Three plain steps: the whole idea in one glance.
+function stepsRow() {
+  const st = (n, t, p) => h('div', { class: 'step' }, h('div', { class: 'sn' }, n), h('h3', {}, t), h('p', {}, p));
+  return h('section', { class: 'steps', id: 'steps' },
+    st('1', 'Lock', 'The organizer puts your fee into the pact.'),
+    st('2', 'Do the gig', 'You show up. The money waits, nobody can touch it.'),
+    st('3', 'Get paid', 'The organizer pays you, or you claim it after the event.'));
+}
+
 // The example pact on the hero: an illustration of the four cues, not a live pact.
 function cueCard() {
   const cues = [
@@ -57,7 +66,7 @@ function cueCard() {
     ['Q4', 'Paid', 'The organizer pays, or you claim after the event end.', 'WAITING', 'idle'],
   ];
   return h('div', { class: 'cuecard', 'aria-label': 'Example pact' },
-    h('div', { class: 'cuehead' }, h('div', {}, h('div', { class: 'k' }, 'EXAMPLE PACT'), h('div', { class: 'cname' }, 'Friday night set, Blue Room')), h('div', { class: 'camt' }, '0.002 BCH')),
+    h('div', { class: 'cuehead' }, h('div', {}, h('div', { class: 'k' }, 'EXAMPLE PACT'), h('div', { class: 'cname' }, 'Saturday event, Main Hall')), h('div', { class: 'camt' }, '0.002 BCH')),
     h('div', { class: 'cues' }, ...cues.map(([q, t, note, st, cls], i) =>
       h('div', { class: 'cue' }, h('span', { class: `led ${cls}` }, h('i')),
         h('div', {}, h('div', { class: 'ctitle' }, h('span', { class: 'cq' }, q), t), h('div', { class: 'cnote' }, note)),
@@ -99,15 +108,15 @@ export function renderHome(app) {
   app.replaceChildren(h('div', { class: 'wrap wide' }, banner(), homeTop(),
     h('section', { class: 'hero' },
       h('div', { class: 'herotext' },
-        h('div', { class: 'eyebrow' }, 'CUE SHEET FOR EVERY GIG'),
-        h('h1', {}, 'Get paid for the gig. ', h('em', {}, 'Before you play.')),
-        h('p', { class: 'lead' }, 'The organizer locks your fee on Bitcoin Cash before the show. When it is done, the pact pays you. No chasing invoices, no ghosting.'),
-        h('div', { class: 'ctas' }, link('#/new', 'Create a pact for my gig', 'btn'), seeRun),
+        h('h1', {}, 'Your fee, ', h('em', {}, 'locked before the gig.')),
+        h('p', { class: 'lead' }, 'The organizer locks your pay on Bitcoin Cash. When the event ends, it is yours.'),
+        h('div', { class: 'who' }, ...['Musicians', 'Sound & light', 'Stage crew', 'Catering', 'Photo & video'].map((t) => h('span', {}, t))),
+        h('div', { class: 'ctas' }, link('#/new', 'Create a pact', 'btn'), seeRun),
         h('p', { class: 'tagline' }, 'Built for musicians first. Made for every gig.')),
       cueCard()),
-    factsRow(), quietSection(), proofSection(), vision(),
+    stepsRow(), factsRow(), quietSection(), proofSection(), vision(),
     h('footer', { class: 'foot' },
-      h('div', {}, h('b', {}, 'GigPact'), h('p', {}, 'Prototype on Bitcoin Cash mainnet, built solo for BCH BLAZE 2026. You can create a pact, fund it, accept it with a WizardConnect wallet, claim after the event, and pay out, waive or take the money back. Collecting after the 3-day waiting period and the dispute steps are still being tested. Use small amounts. No independent audit. So far it is built and tested for gigs only; the wider sectors are our vision.')),
+      h('div', {}, h('b', {}, 'GigPact'), h('p', {}, 'Prototype on Bitcoin Cash mainnet, built solo for BCH BLAZE 2026. Collecting after the 3-day waiting period and the dispute steps are still being tested. Use small amounts. No independent audit. Built and tested for gigs only; the wider sectors are our vision.')),
       h('div', { class: 'flinks' }, ...[[REPO_URL, 'Source on GitHub'], [DECLARATION_URL, 'Declaration'], [BEFORE_AFTER_URL, 'Before / After']].map(([u, t]) => h('a', { href: u, target: '_blank', rel: 'noopener noreferrer' }, t))))));
 }
 

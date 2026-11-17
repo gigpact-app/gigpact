@@ -49,19 +49,32 @@ async function etaText(tEnd) {
   try { const t = await tip(); if (tEnd <= t) return `block ${tEnd} (already reached)`; const ms = Date.now() + (tEnd - t) * 600_000; return `${new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (block ${tEnd})`; } catch { return `block ${tEnd}`; }
 }
 
+// Approximate USD value of a BCH amount, shown next to the fee. Purely informational: the pact always uses the BCH amount typed.
+let usdRate = null;
+const rateReady = fetch('https://api.coinbase.com/v2/prices/BCH-USD/spot').then((r) => r.json()).then((j) => { const v = Number(j?.data?.amount); if (v > 0) usdRate = v; }).catch(() => {});
+const localInput = (d) => { const z = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; };
+
 function newPact() {
   const err = h('p', { class: 'err', role: 'alert' });
-  const f = { name: h('input', { id: 'name', maxlength: 60, placeholder: 'Friday night set, Blue Room', autocomplete: 'off' }),
+  const f = { name: h('input', { id: 'name', maxlength: 60, placeholder: 'Saturday event, Main Hall', autocomplete: 'off' }),
     fee: h('input', { id: 'fee', inputmode: 'decimal', placeholder: '0.002', autocomplete: 'off' }),
     end: h('input', { id: 'end', type: 'datetime-local' }),
     addr: h('input', { id: 'addr', placeholder: `${NET === 'mainnet' ? 'bitcoincash:q…' : 'bchtest:q…'}`, autocomplete: 'off', spellcheck: 'false' }) };
   const out = h('div');
+  const usd = h('div', { class: 'hint' }, `At least ${fmtBch(MIN_FEE_SAT)} BCH.`);
+  const showUsd = () => { let v = 0; try { v = Number(parseBch(f.fee.value)); } catch { /* typing in progress */ }
+    usd.textContent = usdRate && v > 0 ? `≈ $${(v / 1e8 * usdRate).toFixed(2)} at today’s rate. At least ${fmtBch(MIN_FEE_SAT)} BCH.` : `At least ${fmtBch(MIN_FEE_SAT)} BCH.`; };
+  f.fee.addEventListener('input', showUsd); rateReady.then(showUsd);
+  const chip = (label, d) => { const b = h('button', { class: 'chip', type: 'button' }, label); b.addEventListener('click', () => { f.end.value = localInput(d); }); return b; };
+  const at = (days, hh, mm) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(hh, mm, 0, 0); return d; };
+  const chips = [['Tonight 23:59', at(0, 23, 59)], ['Tomorrow 02:00', at(1, 2, 0)], ['Tomorrow 23:59', at(1, 23, 59)]]
+    .filter(([, d]) => d.getTime() - Date.now() > 75 * 60_000).map(([l, d]) => chip(l, d));
   const btn = h('button', { class: 'btn', type: 'submit' }, 'Create pact request');
   const form = h('form', { class: 'card', novalidate: true },
-    h('label', { for: 'name' }, 'Gig'), f.name,
-    h('label', { for: 'fee' }, 'Your fee (BCH)'), f.fee, h('div', { class: 'hint' }, `At least ${fmtBch(MIN_FEE_SAT)} BCH.`),
-    h('label', { for: 'end' }, 'When does the event end?'), f.end, h('div', { class: 'hint' }, 'You can claim your fee after this moment. It is converted to a block height, about 10 minutes per block.'),
-    h('label', { for: 'addr' }, 'Where should the money go? (your BCH address)'), f.addr,
+    h('label', { for: 'name' }, 'What is the gig?'), f.name,
+    h('label', { for: 'fee' }, 'Your fee (BCH)'), f.fee, usd,
+    h('label', { for: 'end' }, 'When does the event end?'), h('div', { class: 'chips' }, ...chips), f.end, h('div', { class: 'hint' }, 'You can claim your fee after this time.'),
+    h('label', { for: 'addr' }, 'Your BCH address (where the money goes)'), f.addr,
     err, h('div', { class: 'row' }, btn));
   form.addEventListener('submit', async (e) => {
     e.preventDefault(); err.textContent = ''; btn.disabled = true; btn.textContent = 'Checking…';
@@ -89,7 +102,7 @@ function newPact() {
     } catch (x) { err.textContent = x instanceof UiError ? x.message : `Something went wrong: ${x.message}`; btn.textContent = 'Create pact request'; }
     btn.disabled = false;
   });
-  app.replaceChildren(h('div', { class: 'wrap' }, top(), h('h2', {}, 'Create a pact for your gig'), h('p', { class: 'sub' }, 'Four quick questions. You get a link to send to the organizer.'), form, out));
+  app.replaceChildren(h('div', { class: 'wrap' }, top(), h('h2', {}, 'Create a pact'), h('p', { class: 'sub' }, 'Four quick answers. You get a link to send to the organizer.'), form, out));
 }
 
 // Has this lock ever received money (including unconfirmed)? null when the server could not answer.
