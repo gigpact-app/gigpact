@@ -11,6 +11,7 @@ import { provider } from './net.js';
 export function workerPanel({ pact, keyW, onDone }) {
   const el = h('div', { class: 'panel' });
   let funded = false, accepted = false, finished = false, busy = false, wstate = 'idle', pairBox = null;
+  let feeNote = null;
   const err = h('p', { class: 'err', role: 'alert' });
   const stepEl = h('p', { class: 'note' });
   const stat = h('p', { class: 'sub' });
@@ -33,6 +34,8 @@ export function workerPanel({ pact, keyW, onDone }) {
     if (ready && pairBox) { pairBox.remove(); pairBox = null; }
     if (ready && !finderBox.firstChild) finderBox.append(finder());
     if (!ready) finderBox.replaceChildren();
+    // A finished pact has nothing left to connect or accept: hide the wallet status, the wallet check and the fee note.
+    for (const x of [stepEl, checkEl, finderBox, feeNote]) if (x) x.hidden = finished;
   }
   function onWallet(s, me) {
     wstate = s === 'pairing' ? (pairBox ? 'pairing' : 'idle') : s;
@@ -107,6 +110,7 @@ export function workerPanel({ pact, keyW, onDone }) {
     h('div', { class: 'row' }, connBtn, discBtn), slot, stepEl, checkEl, finderBox, err,
     h('div', { class: 'row' }, accBtn),
     h('p', { class: 'note' }, 'Accepting costs only the network fee (a few hundred satoshi), paid from your wallet. The pact money stays in the pact; no one can take it outside the pact rules. The connected wallet needs a small balance of its own to cover that fee: about 0.00004 BCH (a few thousand satoshi) is enough.'));
+  feeNote = el.lastElementChild;
   if (hasStoredWallet()) { wstate = 'connecting'; connect(onWallet); }
   render();
   return { el, setFunded(f, acc, fin) { funded = !!f; if (acc) accepted = true; if (fin) finished = true; render(); } };
