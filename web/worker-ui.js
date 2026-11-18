@@ -7,10 +7,10 @@ import { addressOf, parseAddress } from './pact.js';
 import { encodeLockingBytecodeP2pkh, hash160 } from '@bitauth/libauth';
 import { provider } from './net.js';
 
-// pact: decoded pact. keyW: Uint8Array. Returns { el, setFunded(bool, accepted?) }.
+// pact: decoded pact. keyW: Uint8Array. Returns { el, setFunded(bool, accepted?, finished?) }.
 export function workerPanel({ pact, keyW, onDone }) {
   const el = h('div', { class: 'panel' });
-  let funded = false, accepted = false, busy = false, wstate = 'idle', pairBox = null;
+  let funded = false, accepted = false, finished = false, busy = false, wstate = 'idle', pairBox = null;
   const err = h('p', { class: 'err', role: 'alert' });
   const stepEl = h('p', { class: 'note' });
   const stat = h('p', { class: 'sub' });
@@ -23,7 +23,8 @@ export function workerPanel({ pact, keyW, onDone }) {
 
   function render() {
     const ready = wstate === 'ready';
-    stat.textContent = accepted ? 'You accepted this pact. The money is now locked for you until the event ends.'
+    stat.textContent = finished ? 'This pact is finished: the money has left the pact address. Nothing more to do here.'
+      : accepted ? 'You accepted this pact. The money is now locked for you until the event ends.'
       : !funded ? 'Waiting for the organizer to fund the pact. You can connect your wallet meanwhile.'
       : ready ? 'The pact is funded and your wallet is connected.' : 'The pact is funded. Connect your wallet to accept it.';
     connBtn.hidden = ready || wstate === 'connecting' || accepted || !!pairBox;
@@ -108,5 +109,5 @@ export function workerPanel({ pact, keyW, onDone }) {
     h('p', { class: 'note' }, 'Accepting costs only the network fee (a few hundred satoshi), paid from your wallet. The pact money stays in the pact; no one can take it outside the pact rules. The connected wallet needs a small balance of its own to cover that fee: about 0.00004 BCH (a few thousand satoshi) is enough.'));
   if (hasStoredWallet()) { wstate = 'connecting'; connect(onWallet); }
   render();
-  return { el, setFunded(f, acc) { funded = !!f; if (acc) accepted = true; render(); } };
+  return { el, setFunded(f, acc, fin) { funded = !!f; if (acc) accepted = true; if (fin) finished = true; render(); } };
 }
