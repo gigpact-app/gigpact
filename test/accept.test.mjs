@@ -233,3 +233,10 @@ test('wallet that refuses or errors: plain message, nothing broadcast; prompt na
   const t = SETTLE_TEXT.A1(p1, 100000n);
   assert.ok(t.includes('bitcoincash:q') && !t.includes('<b>') && !t.includes('&'), 'real address, no markup');
 });
+
+test('walletCoins: a coin at change index 100 (a well-used wallet) is found with the default scan; one far beyond is not', async () => {
+  const coins = { [walletAddr('change', 100)]: [{ txid: T(33), vout: 0, satoshis: 26000n }], [walletAddr('change', 400)]: [{ txid: T(34), vout: 0, satoshis: 9000n }] };
+  const found = await walletCoins({ derive, getUtxos: async (a) => coins[a] ?? [] });
+  assert.deepEqual(found.map((c) => c.satoshis), [26000n]);
+  assert.equal(found.failed, 0);
+});

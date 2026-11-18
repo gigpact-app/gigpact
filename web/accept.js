@@ -11,7 +11,7 @@ import { prepareSign, verifySigned, findSponsorPath, WC_PATHS } from '../src/wiz
 import { UiError, chainFor, addressOf } from './pact.js';
 import { PREFIX } from './config.js';
 
-const SCAN = { receive: 50, change: 30 }; // addresses per path name that are looked at for a sponsor coin (a used wallet's open address can be well past 20)
+const SCAN = { receive: 60, change: 120 }; // addresses per path name that are looked at for a sponsor coin. A wallet that makes a new change address per payment (Paytaca) had its coin at change index 31 on 18 Nov, so 30 was too few.
 const CONCURRENCY = 8;
 const FEE_ALLOWANCE = 3000n;   // rough upper bound for the F1 fee, used only to pre-select sponsor coins (buildTx fits the exact fee)
 
