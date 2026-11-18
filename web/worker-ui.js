@@ -51,7 +51,7 @@ export function workerPanel({ pact, keyW, onDone }) {
       checkEl.textContent = `Wallet check: first receive address ${first}. Looking for coins…`;
       const coins = await walletCoins({ derive, getUtxos: (a) => provider.getUtxos(a) });
       const total = coins.reduce((a, c) => a + c.satoshis, 0n);
-      checkEl.textContent = `Wallet check: first receive address ${first}. Plain coins this wallet can sign for: ${coins.length} (${total} sat). Looked at ${coins.scanned} addresses; ${coins.failed} lookups failed; ${coins.tokenOutputs} token outputs skipped. Compare the address with your wallet app.`;
+      checkEl.textContent = `Wallet check: first receive address ${first}. Plain coins this wallet can sign for: ${coins.length} (${total} sat). Looked at ${coins.scanned} addresses; ${coins.failed} lookups failed; ${coins.tokenOutputs} token outputs skipped. Compare the address with your wallet app.${coins.length === 0 && !coins.failed ? ' No plain Bitcoin Cash was found, so accepting would fail: the wallet needs about 0.00004 BCH of its own to pay the network fee.' : ''}`;
     } catch (x) { checkEl.textContent = `Wallet check failed: ${x?.message || x}`; }
   }
   // Diagnostic: find which shared key (path/index) belongs to an address the user copied from their wallet app. Pure computation.
