@@ -1,6 +1,6 @@
 # G1 security boundaries (recorded 2026-11-14, after cross-review)
 
-Evidence level of G1: source compiled with cashc 0.14.0 on two machines (hashes match). No path executed (no R-VM, regtest, wallet or mainnet evidence yet).
+Evidence level of G1 at the time of recording (14 November): source compiled with cashc 0.14.0 on two machines (hashes match); no path executed yet. Later evidence is recorded in the sections below (R-VM, regtest) and in docs/evidence (mainnet, M1 to M7).
 
 - G1-01 (fixed in source): `Funded.cancel` (F2) no longer requires `F >= dustSafe`. At consensus-script level the contract no longer blocks a refund of a sub-DUST_SAFE UTXO. This is not a recovery guarantee: the refund still needs a sponsor input for the fee and network relay policy must accept the output (measured in G7). Tests needed in G2: F2 below/equal DUST_SAFE, amounts different from fundedValue, network dust-policy limits.
 - G1-02 (boundary): the contracts verify the role signature with `checkSig` but do NOT restrict the signature hash type on-chain. Sighash 0x61 is a transaction-builder (G6) policy, not a contract guarantee. It must not be presented as an on-chain guarantee.

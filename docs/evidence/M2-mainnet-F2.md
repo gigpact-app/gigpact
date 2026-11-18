@@ -23,6 +23,6 @@ Date: 2026-11-16 (Istanbul, about 15:19). Network: Bitcoin Cash mainnet.
 - Together with M1, the paths F1, A1 and F2 have now run on mainnet with a real wallet.
 
 ## What this does NOT show
-- A2, A3, C1-C4 and D1-D6 have not run on mainnet with a real wallet (A3 and C1 are planned next on a separate test pact).
+- At the time of this run, A2, A3, C1-C4 and D1-D6 had not run on mainnet with a real wallet. Later: A3, A2, C3 and C4 ran (M3 to M6). C1, C2, A4 and D1-D6 have still not run on mainnet (C1 is planned next on a separate test pact).
 - The same wallet owned both roles (organizer and worker) in this test.
 - The page did not show a "Cancelled" state for this run: the cancel was made with a build that had no cancel marker, so the page showed "Waiting for funding" again. This was fixed afterwards (commit 1abe426) and applies to later cancels.

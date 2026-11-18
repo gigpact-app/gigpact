@@ -1,6 +1,6 @@
 # Before / After
 
-This page compares the state at hackathon kick-off (14 November 2026) with the state of this repository now (16 November 2026). The BCH BLAZE project presentation (made with the official template) is linked from the banner at the top of the app's home page.
+This page compares the state at hackathon kick-off (14 November 2026) with the state of this repository now (18 November 2026). The BCH BLAZE project presentation (made with the official template) is linked from the banner at the top of the app's home page.
 
 | Topic | Before (kick-off) | After (now) |
 |---|---|---|
@@ -10,7 +10,7 @@ This page compares the state at hackathon kick-off (14 November 2026) with the s
 | Wallet | Standalone compatibility experiments with Paytaca and Selene (not part of this repository) | WizardConnect pairing in the app; Paytaca and Selene signed the sponsor input of the accept (F1) and pay (A1) transactions |
 | Web app | None | Create a request, fund it with a QR code, accept with a wallet, pay out or take the money back |
 | Mainnet | None | One full run of fund, accept, pay: three confirmed transactions (blocks 977,601 / 977,601 / 977,604) |
-| Tests | None | 228 tests (contract VM, library, web logic) plus regtest tests on a local BCHN node |
+| Tests | None | 240 tests (contract VM, library, web logic) plus regtest tests on a local BCHN node |
 | Paths run with a real wallet on mainnet | None | F1, A1, F2, A3, A2, C3 and C4 only |
 | Paths not yet run with a real wallet | All | A4, C1, C2, D1-D6 (regtest: A4, C1, C2, D1-D6) |
 
