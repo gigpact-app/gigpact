@@ -7,10 +7,10 @@ import { addressOf, parseAddress } from './pact.js';
 import { encodeLockingBytecodeP2pkh, hash160 } from '@bitauth/libauth';
 import { provider } from './net.js';
 
-// pact: decoded pact. keyW: Uint8Array. Returns { el, setFunded(bool, accepted?, finished?) }.
+// pact: decoded pact. keyW: Uint8Array. Returns { el, setFunded(bool, accepted?, finished?, pending?) }; pending = the funding is on the network but has no confirmation yet.
 export function workerPanel({ pact, keyW, onDone }) {
   const el = h('div', { class: 'panel' });
-  let funded = false, accepted = false, finished = false, busy = false, wstate = 'idle', pairBox = null;
+  let funded = false, accepted = false, finished = false, pending = false, busy = false, wstate = 'idle', pairBox = null;
   let feeNote = null;
   const err = h('p', { class: 'err', role: 'alert' });
   const stepEl = h('p', { class: 'note' });
@@ -26,6 +26,7 @@ export function workerPanel({ pact, keyW, onDone }) {
     const ready = wstate === 'ready';
     stat.textContent = finished ? 'This pact is finished: the money has left the pact address. Nothing more to do here.'
       : accepted ? 'You accepted this pact. The money is now locked for you until the event ends.'
+      : pending ? 'The funding is on the network and waits for 1 confirmation (usually within about 10 minutes). You can connect your wallet meanwhile.'
       : !funded ? 'Waiting for the organizer to fund the pact. You can connect your wallet meanwhile.'
       : ready ? 'The pact is funded and your wallet is connected.' : 'The pact is funded. Connect your wallet to accept it.';
     connBtn.hidden = ready || wstate === 'connecting' || accepted || !!pairBox;
@@ -113,5 +114,5 @@ export function workerPanel({ pact, keyW, onDone }) {
   feeNote = el.lastElementChild;
   if (hasStoredWallet()) { wstate = 'connecting'; connect(onWallet); }
   render();
-  return { el, setFunded(f, acc, fin) { funded = !!f; if (acc) accepted = true; if (fin) finished = true; render(); } };
+  return { el, setFunded(f, acc, fin, pend) { funded = !!f; pending = !!pend; if (acc) accepted = true; if (fin) finished = true; render(); } };
 }

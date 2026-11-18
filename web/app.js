@@ -219,7 +219,7 @@ async function pactScreen(code) {
       if (fx.length === 1) {
         // Accept spends the funding output; a worker who accepts on a 0-conf funding could be fooled by a replaced payment. Wait for 1 confirmation.
         let conf = null; try { conf = confirmedFrom(await provider.performRequest('blockchain.scripthash.listunspent', binToHex(sha256.hash(chain.locks.funded).reverse())), fx[0].txid, fx[0].vout); } catch { conf = null; }
-        if (conf === false) { setState('Waiting for 1 confirmation', 'warn', `The funding payment is on the network (${fx[0].txid}:${fx[0].vout}) but not in a block yet. The worker can accept after the first confirmation, usually within about 10 minutes.`); wp?.setFunded(false); fundGone(false); return; }
+        if (conf === false) { setState('Waiting for 1 confirmation', 'warn', `The funding payment is on the network (${fx[0].txid}:${fx[0].vout}) but not in a block yet. The worker can accept after the first confirmation, usually within about 10 minutes.`); wp?.setFunded(false, false, false, true); fundGone(false); return; }
         setState('Funded', 'ok', `Funding found on chain: ${fx[0].txid}:${fx[0].vout}${us.length > 1 ? ` (${us.length - 1} other small output(s) at the address are ignored)` : ''}`); wp?.setFunded(true); fundGone(false);
       }
       else if (us.length === 0 && doneMark()) { const d = doneMark(); if (d.path === 'F2') setState('Cancelled', 'warn', `The organizer cancelled before the worker accepted. The money went back to ${d.to}. Transaction ${d.txid}. Do not pay this pact again.`); else setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true, true); fundGone(true); keyDone(true); return; }
