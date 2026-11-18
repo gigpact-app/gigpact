@@ -99,6 +99,7 @@ header.top { flex-wrap:wrap; gap:12px 32px; padding:24px 0; }
 .hero .lead { font-size:1.25rem; max-width:30em; margin:0 0 32px; line-height:1.5; }
 .ctas { display:flex; flex-wrap:wrap; gap:16px 28px; align-items:center; }
 .ctas .btn { border-radius:8px; }
+.ctanote { color:var(--mute); font-size:.88rem; line-height:1.45; margin:12px 0 0; max-width:36em; }
 .hero .tagline { font:400 .85rem var(--mono); color:var(--mute); margin:36px 0 0; letter-spacing:0; }
 .cuecard { flex:1 1 380px; min-width:0; max-width:520px; background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 24px 60px rgba(0,0,0,.45); }
 .cuehead { display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:flex-end; padding:20px 24px; border-bottom:1px solid var(--line); }
