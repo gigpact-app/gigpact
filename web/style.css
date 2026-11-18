@@ -39,7 +39,7 @@ input:focus { outline:2px solid var(--accent); outline-offset:1px; }
 .pass .k { font-size:.7rem; letter-spacing:.16em; text-transform:uppercase; opacity:.6; }
 .pass .name { font-size:1.6rem; font-weight:800; letter-spacing:-.02em; line-height:1.1; margin:4px 0 14px; overflow-wrap:anywhere; }
 .pass .amt { font-size:2.2rem; font-weight:800; letter-spacing:-.03em; }
-.pass .amt small { font-size:.9rem; font-weight:600; opacity:.6; margin-left:6px; }
+.pass .amt small { font-size:.9rem; font-weight:600; opacity:.6; margin-left:6px; white-space:nowrap; display:inline-block; }
 .pass .meta { margin-top:12px; font-size:.92rem; }
 .pass .meta div { margin:3px 0; }
 .pass .tear { border-top:2px dashed rgba(0,0,0,.25); margin:18px -22px 14px; }

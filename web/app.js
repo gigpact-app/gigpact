@@ -47,7 +47,7 @@ function pass(p, { state, stateClass, eta, seed }) {
     h('div', { style: 'margin-top:12px' }, h('span', { class: `state ${stateClass ?? ''}` }, state)));
 }
 async function etaText(tEnd) {
-  try { const t = await tip(); if (tEnd <= t) return `block ${tEnd} (already reached)`; const ms = Date.now() + (tEnd - t) * 600_000; return `${new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (block ${tEnd})`; } catch { return `block ${tEnd}`; }
+  try { const t = await tip(); if (tEnd <= t) return `block ${tEnd} (already reached)`; const q = 900_000, ms = Math.round((Date.now() + (tEnd - t) * 600_000) / q) * q; return `about ${new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (block ${tEnd}; the exact time depends on the blocks)`; } catch { return `block ${tEnd}`; }
 }
 
 // Approximate USD value of a BCH amount, shown next to the fee. Purely informational: the pact always uses the BCH amount typed.
