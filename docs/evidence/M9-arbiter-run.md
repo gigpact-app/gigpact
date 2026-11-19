@@ -30,6 +30,8 @@ Date: 2026-11-19. Event end block 978049. Run by `scripts/mainnet-arbiter-run.mj
 | P5 (F 10400 sat, worker waives) | C2 objectClaim | C2 | [aeb7e85e5119…](https://3xpl.com/bitcoin-cash/transaction/aeb7e85e511972e6843191c5fce89afecc82b569b112a955c9bab21160de90db) | 819 |
 | P5 (F 10400 sat, worker waives) | D6 decision | D6 | [234ae97c3602…](https://3xpl.com/bitcoin-cash/transaction/234ae97c3602aed6caf47f0c6bd3c968fa7ccd9c767b24e4ff2a2a13ce8d5992) | 1175 |
 
+Confirmation check, 19 November 2026 about 17:50 UTC: all 25 transactions are in blocks (the funding and accept steps had 7 to 11 confirmations, the claim, objection and decision steps 4 each).
+
 Full ids:
 
 ```
