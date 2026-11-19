@@ -8,13 +8,14 @@ GigPact is a prototype for small amounts. It has **no independent audit**. This 
 |---|---|---|---|
 | Code, tests, documentation | Claude (the author's assistant) | everything | the repository |
 | Text review | Gemini | documents only | recorded in [G1-BOUNDARIES.md](G1-BOUNDARIES.md) |
-| Contract review, 19 Nov 2026 | Grok 4.7 (Medium) in Cursor, an empty workspace | the four `.cash` sources and a short description | [docs/reviews/second-model-review-grok-4.7.md](reviews/second-model-review-grok-4.7.md), raw and unedited |
+| Contract review, 19 Nov 2026 | Grok 4.7 (Medium) in Cursor, an empty workspace | the four `.cash` sources and a short description | [second-model-review-grok-4.7.md](reviews/second-model-review-grok-4.7.md), raw and unedited |
+| Contract review, 19 Nov 2026 | DeepSeek, web chat, file upload | the four `.cash` sources, the description and the real parameter values | [second-model-review-deepseek.md](reviews/second-model-review-deepseek.md), raw and unedited |
 
-The Grok review is a read-only pass by a model from a different vendor. It is a second opinion, **not an audit**. The reviewer saw only the contracts, not the app, the transaction library or the tests.
+The Grok and DeepSeek reviews are read-only passes by models from other vendors. They are second opinions, **not audits**. Each reviewer saw only the contracts, not the app, the transaction library or the tests. The prompt of the DeepSeek review is in [reviews/review-prompt.md](reviews/review-prompt.md); Grok got the same text without the paragraph of real parameter values.
 
-## Result of the second-model review
+## Result of the second-model reviews
 
-No third party, sponsor or miner can redirect the fee of a correctly parameterized pact: output 0 is pinned on every path and the splits add back to the amount that went in. The losses it describes come from races the code allows on purpose, from constructor arguments the chain does not cross-check, and from key loss.
+Both reviews reach the same conclusion. No third party, sponsor or miner can redirect the fee of a correctly parameterized pact: output 0 is pinned on every path and the splits add back to the amount that went in. The losses it describes come from races the code allows on purpose, from constructor arguments the chain does not cross-check, and from key loss.
 
 ## Findings and our check
 
@@ -31,6 +32,19 @@ No third party, sponsor or miner can redirect the fee of a correctly parameteriz
 | F9 | A few comments describe a stricter rule than the code | Confirmed, comments only; the sources stay unchanged. | None |
 
 The reviewer's open questions, answered from the repository: the event end and T_A4 are block heights (the library refuses anything else); the arbiter fee is 2,000 sat and the contract needs a fee of at least four times that (8,000 sat), the form asks for at least 0.0001 BCH (10,000 sat); the waits are 432 blocks (about 3 days) and 2016 blocks (about 14 days).
+
+## Second review (DeepSeek): what repeats and what is new
+
+Repeats: the constructor arguments are not bound on chain (Grok F2); the organizer can delay the worker by objecting just before the collect (Grok F4); the sub-dust cancel (F6, not reachable with a fee of at least 8,000 sat); the odd satoshi (F8). Both direct questions get a plain yes with the exact transaction sequence: if the organizer does nothing after the worker accepted, the worker collects (accept, claim after the event end, collect after 432 blocks); before the accept the organizer recovers the fee with the cancel. The one caveat is inherent: if the worker's accept confirms first, the cancel is no longer possible.
+
+New and our check:
+
+| # | Finding (short) | Our check | Status |
+|---|---|---|---|
+| D1 | A funding output that carries a CashToken can never be spent, because every path requires token-free inputs | Confirmed for the contracts. In the app: the organizer page counts only an exact, token-free output as funding, the worker page refuses a funding output with a token ("The funding output carries a token, which this pact does not accept."), and spending requires token-free contract and sponsor inputs (`web/app.js`, `web/accept.js`, `src/spend.mjs`). Reaching it needs a token-aware wallet that attaches a token on purpose or by mistake; the loss is the organizer's own. | Known limit, small |
+| D2 | Whether the sponsor inputs are signed with SIGHASH_ALL | Yes, the library rejects any sponsor signature that is not hash type 0x61 (ALL, FORKID, UTXOS) and compares the signed transaction with the expected one before it is used (`verifySigned` in `src/wizard.mjs`, tests in `test/wizard.test.mjs`). | Answered |
+
+Each review found something the other did not: Grok the claim / dispute race after T_A4 and the lost-key cases, DeepSeek the token-bearing funding output. Neither found a way to take money from a correctly parameterized pact.
 
 ## What a lost key does
 
