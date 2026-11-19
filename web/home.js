@@ -77,7 +77,7 @@ function cueCard() {
 
 function factsRow() {
   const f = (n, t) => h('div', { class: 'fact' }, h('div', { class: 'fn' }, n), h('div', { class: 'ft' }, t));
-  return h('div', { class: 'facts' }, f('4', 'CashScript contracts'), f('16', 'spend paths, fixed rules'), f('7', 'paths run on mainnet with a real wallet so far'), f('MIT', 'open source, public repository'));
+  return h('div', { class: 'facts' }, f('4', 'CashScript contracts'), f('16', 'spend paths, fixed rules'), f('8', 'paths run on mainnet with a real wallet so far'), f('MIT', 'open source, public repository'));
 }
 
 function quietSection() {
@@ -89,7 +89,7 @@ function quietSection() {
       col('EVENT ENDS · WITHIN 7 DAYS', 'You claim', 'After the event end you press Claim, and you need to do it within 7 days. The pact checks the block height, not anyone’s word.'),
       col('432 BLOCKS · ABOUT 3 DAYS', 'Waiting period', 'A window in which the organizer can pay you at once, or object.'),
       col('THEN', 'You collect', 'If nobody objects, no signature from the organizer is needed. The fee goes to your payout address. The network fee is paid by the wallet that triggers the payout, not taken from the locked fee.')),
-    h('p', { class: 'note' }, 'The claim and the organizer’s answers (pay now, waive) have run on mainnet. Collecting after the 432 blocks is still being tested. If you do not claim within 7 days after the event end, the organizer can open a dispute that ends 50/50 by default.'));
+    h('p', { class: 'note' }, 'The claim, the organizer’s answers (pay now, waive) and collecting after the 432 blocks have run on mainnet. If you do not claim within 7 days after the event end, the organizer can open a dispute that ends 50/50 by default.'));
 }
 
 function problemSection() {
@@ -101,7 +101,7 @@ function problemSection() {
       col('BEFORE YOU ACCEPT', 'Take it back', 'Until the worker accepts, the organizer can cancel and get the whole fee back.'),
       col('AFTER THE EVENT', 'Pay, or object', 'If the work was not delivered, the organizer can object instead of paying. The money moves into a dispute.'),
       col('THEN', 'Arbiter, then a fallback', 'In the design an arbiter decides: worker, organizer or a split. If nobody decides in time (about 14 days), a fallback pays the worker in full after an objection, or splits 50/50 after a late dispute.')),
-    h('p', { class: 'note' }, 'Cancel, claim and waive have run on mainnet. The dispute steps are in the contracts and pass tests on a local test chain, but this prototype does not offer them in the app yet. No real arbiter is connected, so today every dispute would end by the time-based fallback.'));
+    h('p', { class: 'note' }, 'Cancel, claim, waive and collect have run on mainnet with a real wallet. The objection and the arbiter’s decisions were also run on mainnet by a script with a test key, and pass tests on a local test chain, but this prototype does not offer them in the app yet. No real arbiter is connected, so today every dispute would end by the time-based fallback.'));
 }
 
 function vision() {
@@ -131,7 +131,7 @@ export function renderHome(app) {
       cueCard()),
     stepsRow(), problemSection(), quietSection(), factsRow(), proofSection(), vision(),
     h('footer', { class: 'foot' },
-      h('div', {}, h('b', {}, 'GigPact'), h('p', {}, 'Prototype on Bitcoin Cash mainnet, built solo for BCH BLAZE 2026. Collecting after the 3-day waiting period and the dispute steps are still being tested. Use small amounts. No independent audit. Built and tested for gigs only; the wider sectors are our vision.')),
+      h('div', {}, h('b', {}, 'GigPact'), h('p', {}, 'Prototype on Bitcoin Cash mainnet, built solo for BCH BLAZE 2026. The dispute steps are not offered in the app yet. Use small amounts. No independent audit. Built and tested for gigs only; the wider sectors are our vision.')),
       h('div', { class: 'flinks' }, ...[[REPO_URL, 'Source on GitHub'], [DECLARATION_URL, 'Declaration'], [BEFORE_AFTER_URL, 'Before / After']].map(([u, t]) => h('a', { href: u, target: '_blank', rel: 'noopener noreferrer' }, t))))));
 }
 

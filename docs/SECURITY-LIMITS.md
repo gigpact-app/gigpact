@@ -78,6 +78,6 @@ So "a lost organizer key means the funds at that stage cannot be taken back" is 
 ## What is not covered
 
 - No independent audit by a human reviewer.
-- The mainnet proofs cover fund, accept, pay, cancel, claim, waive, and pay or waive at the claim stage. Collect after the wait, the objection and the dispute paths ran only on a local test chain and in contract tests.
+- The mainnet proofs with a real wallet cover fund, accept, pay, cancel, claim, waive, pay or waive at the claim stage, and collect after the wait (C1). The objection and the arbiter decisions ran on mainnet by script with a test arbiter key, not through the app. The two time fallbacks (A4 after about 7 days, D4 after about 14 days) ran only on a local test chain and in contract tests.
 - Wallets (Paytaca, Selene) are not part of this review.
 - Keys live in the browser. Back them up with the box the app offers.

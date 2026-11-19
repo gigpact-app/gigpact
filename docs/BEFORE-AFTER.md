@@ -11,8 +11,9 @@ This page compares the state at hackathon kick-off (14 November 2026) with the s
 | Web app | None | Create a request, fund it with a QR code, accept with a wallet, pay out or take the money back |
 | Mainnet | None | One full run of fund, accept, pay: three confirmed transactions (blocks 977,601 / 977,601 / 977,604). Repeated on 18 November with Paytaca on the current build: fund, accept, pay (docs/evidence/M7b). The 'waiting for 1 confirmation' gate was seen live and a cancel (F2) was repeated (docs/evidence/M7c) |
 | Tests | None | 241 tests (contract VM, library, web logic) plus regtest tests on a local BCHN node |
-| Paths run with a real wallet on mainnet | None | F1, A1, F2, A3, A2, C3 and C4 only |
-| Paths not yet run with a real wallet | All | A4, C1, C2, D1-D6 (regtest: A4, C1, C2, D1-D6) |
+| Paths run with a real wallet on mainnet | None | F1, A1, F2, A3, A2, C3, C4 and C1 (docs/evidence/M1 to M8) |
+| Paths run on mainnet by script, not through the app | None | C2, D1, D2, D3, D5, D6 with local keys and a test arbiter key (docs/evidence/M9) |
+| Paths not run on mainnet | All | A4 and D4 (about 7 and 14 days; regtest has run both) |
 
 ## What did not change
 
@@ -21,7 +22,7 @@ This page compares the state at hackathon kick-off (14 November 2026) with the s
 
 ## What is still open
 
-- A real-wallet run of collect after the waiting period (C1, planned about 19 Nov). Cancel (F2), claim-after-event (A3), waive after accepting (A2), organizer pays at the claim stage (C3) and waive at the claim stage (C4) have run: see docs/evidence/M2 to M6.
+- Cancel (F2), claim-after-event (A3), waive after accepting (A2), organizer pays at the claim stage (C3), waive at the claim stage (C4) and collect after the waiting period (C1) have run with a real wallet: see docs/evidence/M2 to M6 and M8. The objection and arbiter paths ran by script only (M9).
 - Selene was verified for funding, accept (F1) and pay (A1) only (docs/evidence/M7); its other paths were not run.
 - Disputes use a discarded demo arbiter key and are closed in the UI.
 - No independent audit.
