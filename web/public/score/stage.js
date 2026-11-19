@@ -23,6 +23,33 @@ const ACT = {
 };
 const KIND_ACT = { lock: "lock", show: "show", ticks: "wait", chord: "finale" };
 
+const KIND_KEY = { lock: "lock", show: "show", ticks: "wait", chord: "finale" };
+
+// What the people say. [who, text, seconds after the event starts]. One script is picked at random.
+const LINES = {
+  lock: [[["org", "Fee locked. No take-backs!", 0.5]], [["org", "Locked in the contract. Gulp.", 0.5]]],
+  F1: [[["wrk", "Accepted! No cancelling now.", 0.4]], [["wrk", "Deal. Shaking hands. Virtually.", 0.4]]],
+  show: [[["wrk", "Playing for a locked fee. Bliss.", 1]], [["wrk", "Best gig ever. I know I'm paid.", 1]]],
+  A3: [[["wrk", "Show's over. Claiming my fee!", 0.3]]],
+  wait: [[["org", "Any day now...", 0.6], ["wrk", "432 blocks. I brought snacks.", 4.2]]],
+  C1: [[["wrk", "Collected. Nobody had to say yes!", 0.5]], [["wrk", "No chasing. No invoice. Just paid.", 0.5]]],
+  F2: [[["org", "Cancelled in time. Phew.", 0.4]]],
+  A2: [[["wrk", "I waive it. Keep it, boss.", 0.4]]],
+  A1: [[["org", "Paying on time? Wow, me.", 0.3], ["wrk", "Paid! My landlord loves you.", 2]]],
+  C3: [[["org", "Fine, fine, I'm paying!", 0.3]]],
+  C4: [[["wrk", "Waiving. Let's stay friends.", 0.4]]],
+  C2: [[["org", "I object!", 0.2], ["arb", "Order! Order!", 1.5]]],
+  A4: [[["org", "I'd like to open a dispute.", 0.3], ["arb", "Order! Order!", 2.2]]],
+  D1: [[["arb", "For the worker!", 0.4]]],
+  D2: [[["arb", "For the organizer.", 0.4]]],
+  D3: [[["arb", "Let's split it.", 0.4]]],
+  D4: [[["arb", "Nobody answered. Time decides.", 0.6]]],
+  D5: [[["org", "Paying after all that. Sigh.", 0.3]]],
+  D6: [[["wrk", "Fine. I waive it.", 0.3]]],
+  finale: [[["wrk", "Eight paths. Real wallet. Real money.", 0.8]]]
+};
+const CONFETTI = ["#3ddc84", "#ffb020", "#5aa9ff", "#ff5d5d", "#c39bff", "#f3f1eb"];
+
 const WAIT_FROM = 977619;
 const WAIT_SPAN = 432;
 
@@ -39,6 +66,7 @@ let bins = null;
 let eq = [];
 let effects = [];
 let parts = [];
+let bubbles = [];
 let lastFrame = 0;
 let raf = 0;
 let running = false;
@@ -175,6 +203,16 @@ function ring(x, y, mood, big) {
   parts.push({ k: "ring", x, y, age: 0, life: big ? 2.2 : 1.4, mood, max: (big ? 260 : 150) * L.s });
 }
 
+function speak(key, dur, mood) {
+  const scripts = LINES[key];
+  if (!scripts) return;
+  const script = scripts[Math.floor(Math.random() * scripts.length)];
+  const t = now();
+  for (const [who, text, delay] of script) {
+    bubbles.push({ who, text, mood, t0: t + delay, dur: Math.min(3.6, Math.max(1.8, dur - delay)) });
+  }
+}
+
 function later(fn, seconds) {
   timers.push(setTimeout(fn, seconds * 1000));
 }
@@ -192,9 +230,11 @@ export function fire(item) {
   ambient = { mood, from: t, until: t + dur };
   ensureLoop();
   const add = (type, extra) => effects.push({ type, t0: t, dur, mood, ...(extra || {}) });
+  speak(item.path || KIND_KEY[item.kind], dur, mood);
 
   if (act === "lock") {
     walletN = 0;
+    add("sweat", { dur: 1.8 });
     potTarget = 1;
     lockT = 0;
     potFill = 0.05;
@@ -245,6 +285,7 @@ export function fire(item) {
   } else if (act === "finale") {
     add("finale");
     add("cheer");
+    add("confetti", { dur: 3.4 });
     for (let i = 0; i < 3; i += 1) later(() => ring(L.wrk.x, L.wrk.y - 40 * L.s, "joy", true), i * 1.2);
   }
 }
@@ -252,6 +293,28 @@ export function fire(item) {
 function judge(angle, dur, wobble) {
   const t = now();
   effects.push({ type: "judge", t0: t, dur: dur + 0.8, angle, wobble: !!wobble, mood: "calm" });
+}
+
+// Three quick presses of one key: the people lose their patience.
+export function egg(path) {
+  if (reduce || !canvas) return;
+  const t = now();
+  bubbles = [];
+  activeUntil = Math.max(activeUntil, t + 4.8);
+  ensureLoop();
+  effects.push({ type: "cheer", t0: t, dur: 3.2, mood: "joy" });
+  effects.push({ type: "confetti", t0: t, dur: 1.8, mood: "joy" });
+  effects.push({ type: "sweat", t0: t + 1.2, dur: 2, mood: "sad" });
+  for (let i = 0; i < 70; i += 1) {
+    parts.push({
+      k: "conf", x: L.wrk.x + rand(-20, 20), y: L.wrk.y - 60 * L.s, vx: rand(-220, 220), vy: -rand(180, 460),
+      rot: rand(0, 6), vr: rand(-8, 8), w: rand(5, 9), h: rand(3, 6), c: CONFETTI[Math.floor(Math.random() * CONFETTI.length)], age: 0, life: 4
+    });
+  }
+  const script = path === "C1"
+    ? [["wrk", "Impatient? 432 blocks, my friend.", 0.1], ["org", "Told you. Be patient.", 2]]
+    : [["wrk", "Hey! Stop poking me!", 0.1], ["org", "Careful, that's my fee!", 1.8]];
+  for (const [who, text, delay] of script) bubbles.push({ who, text, mood: "joy", t0: t + delay, dur: 2.4 });
 }
 
 export function setRunning(flag) {
@@ -267,7 +330,8 @@ export function calm() {
   for (const id of timers) clearTimeout(id);
   timers.length = 0;
   effects = [];
-  parts = parts.filter((p) => p.k === "spark" || p.k === "ring");
+  bubbles = [];
+  parts = parts.filter((p) => p.k === "spark" || p.k === "ring" || p.k === "conf");
   potTarget = 1;
   scaleTarget = 0;
   ambient.until = 0;
@@ -457,8 +521,10 @@ function drawWorker(a) {
   g.scale(L.s, L.s);
   g.globalAlpha = a;
   const col = cheer > 0.2 ? MOODS.joy.c : INK;
-  line(-8, -30, -10, 0, col, 5);
-  line(8, -30, 10, 0, col, 5);
+  const step = cheer > 0.05 ? Math.sin(t * 8.5) * 7 * cheer : 0;
+  g.rotate(cheer > 0.05 ? Math.sin(t * 4.25) * 0.1 * cheer : 0);
+  line(-8, -30, -10 + step, 0, col, 5);
+  line(8, -30, 10 + step, 0, col, 5);
   line(0, -64, 0, -30, col, 6);
   g.beginPath();
   g.arc(0, -78, 11, 0, Math.PI * 2);
@@ -689,6 +755,19 @@ function update(dt, t) {
     const k = H / 900;
     parts.push({ k: "ball", x: L.wallet.x, y: L.wallet.y - 20, vx: rand(-130, 130) * k * L.s, vy: -rand(520, 760) * k, age: 0, life: 2.4, grav: 900 * k, mood: Math.random() < 0.7 ? "joy" : "calm", spin: rand(5, 9) });
   }
+  const conf = fx("confetti");
+  if (conf.v > 0.1 && Math.random() < dt * 90 * conf.v) {
+    for (let i = 0; i < 2; i += 1) {
+      parts.push({
+        k: "conf", x: rand(0, W), y: -10, vx: rand(-40, 40), vy: rand(90, 210), rot: rand(0, 6), vr: rand(-6, 6),
+        w: rand(5, 9), h: rand(3, 6), c: CONFETTI[Math.floor(Math.random() * CONFETTI.length)], age: 0, life: 5
+      });
+    }
+  }
+  const nervous = Math.max(fx("tense").v, fx("toll").v * 0.7, fx("sweat").v);
+  if (nervous > 0.2 && Math.random() < dt * 4) {
+    parts.push({ k: "sweat", x: L.org.x + rand(6, 14) * L.s, y: L.org.y - 88 * L.s, vx: rand(10, 40), vy: rand(20, 60), age: 0, life: 0.9 });
+  }
   // moving parts
   const next = [];
   for (const p of parts) {
@@ -733,6 +812,20 @@ function update(dt, t) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       if (p.age < p.life) next.push(p);
+    } else if (p.k === "conf") {
+      p.age += dt;
+      p.x += (p.vx + Math.sin(p.age * 3 + p.rot) * 24) * dt;
+      p.y += p.vy * dt;
+      p.vy += 20 * dt;
+      p.vx *= 1 - Math.min(1, dt * 0.8);
+      p.rot += p.vr * dt;
+      if (p.age < p.life && p.y < H + 20) next.push(p);
+    } else if (p.k === "sweat") {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 140 * dt;
+      if (p.age < p.life) next.push(p);
     } else if (p.k === "ball") {
       p.age += dt;
       p.x += p.vx * dt;
@@ -742,6 +835,7 @@ function update(dt, t) {
     }
   }
   parts = next.length > 700 ? next.slice(-700) : next;
+  bubbles = bubbles.filter((b) => t < b.t0 + b.dur + 0.1);
   // state easing
   potFill += (potTarget - potFill) * Math.min(1, dt * 3);
   if (lockT < 1 && !parts.some((p) => p.kind === "drop")) lockT = Math.min(1, lockT + dt * 2);
@@ -786,6 +880,26 @@ function drawParts(t) {
       g.arc(p.x, p.y, p.max * ease(u), 0, Math.PI * 2);
       g.stroke();
       g.globalAlpha = 1;
+    } else if (p.k === "conf") {
+      g.save();
+      g.translate(p.x, p.y);
+      g.rotate(p.rot);
+      g.scale(1, Math.cos(p.age * 6 + p.rot));
+      g.globalAlpha = Math.min(1, (p.life - p.age) * 1.2);
+      g.fillStyle = p.c;
+      g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      g.restore();
+      g.globalAlpha = 1;
+    } else if (p.k === "sweat") {
+      g.globalAlpha = Math.max(0, 1 - p.age / p.life);
+      g.fillStyle = MOODS.sad.c;
+      g.beginPath();
+      g.arc(p.x, p.y, 2.6 * L.s + 0.8, 0, Math.PI * 2);
+      g.moveTo(p.x - 2.2 * L.s - 0.6, p.y - 1);
+      g.lineTo(p.x, p.y - 7 * L.s - 2);
+      g.lineTo(p.x + 2.2 * L.s + 0.6, p.y - 1);
+      g.fill();
+      g.globalAlpha = 1;
     } else if (p.k === "rain") {
       g.globalAlpha = 0.55 * Math.min(1, (0.9 - p.age) * 2);
       line(p.x, p.y, p.x - 2, p.y + 13, MOODS.sad.c, 1.6);
@@ -798,6 +912,75 @@ function drawParts(t) {
       g.fillText(p.g, p.x, p.y);
       g.globalAlpha = 1;
     }
+  }
+}
+
+function wrapText(text, max) {
+  const lines = [];
+  let cur = "";
+  for (const word of text.split(" ")) {
+    if ((cur ? `${cur} ${word}` : word).length > max && cur) {
+      lines.push(cur);
+      cur = word;
+    } else {
+      cur = cur ? `${cur} ${word}` : word;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function drawBubbles(t) {
+  const fs = Math.max(10, 11.5 * L.s);
+  const side = L.mode === "wide" ? L.eq[0][1] - L.eq[0][0] : 999;
+  const max = side > 190 ? 22 : 16;
+  for (const b of bubbles) {
+    const age = t - b.t0;
+    if (age < 0 || age > b.dur) continue;
+    const pop = Math.min(1, age / 0.24);
+    const sc = 0.78 + 0.22 * ease(pop) + Math.sin(pop * Math.PI) * 0.07;
+    const alpha = Math.min(ease(age / 0.15), ease((b.dur - age) / 0.3));
+    const anchor = b.who === "org" ? L.org : b.who === "arb" ? L.scale : L.wrk;
+    const lines = wrapText(b.text, max);
+    g.font = `700 ${fs}px ${MONO}`;
+    let w = 0;
+    for (const l of lines) w = Math.max(w, g.measureText(l).width);
+    w += 20;
+    const h = lines.length * fs * 1.3 + 14;
+    const bx = Math.max(w / 2 + 6, Math.min(W - w / 2 - 6, anchor.x));
+    const top = anchor.y - 112 * L.s - h;
+    const tail = Math.max(bx - w / 2 + 14, Math.min(bx + w / 2 - 14, anchor.x));
+    const m = moodOf(b.mood);
+    g.save();
+    g.globalAlpha = alpha;
+    g.translate(bx, top + h + 10);
+    g.scale(sc, sc);
+    g.translate(-bx, -(top + h + 10));
+    rr(bx - w / 2, top, w, h, 10);
+    g.fillStyle = "#f3f1eb";
+    g.fill();
+    g.lineWidth = 2.5;
+    g.strokeStyle = m.c;
+    g.stroke();
+    g.beginPath();
+    g.moveTo(tail - 7, top + h - 1);
+    g.lineTo(tail, top + h + 10);
+    g.lineTo(tail + 7, top + h - 1);
+    g.closePath();
+    g.fillStyle = "#f3f1eb";
+    g.fill();
+    g.stroke();
+    g.beginPath();
+    g.moveTo(tail - 6, top + h - 2);
+    g.lineTo(tail + 6, top + h - 2);
+    g.strokeStyle = "#f3f1eb";
+    g.lineWidth = 3.5;
+    g.stroke();
+    g.fillStyle = "#111317";
+    g.textAlign = "center";
+    g.textBaseline = "alphabetic";
+    lines.forEach((l, i) => g.fillText(l, bx, top + 7 + (i + 1) * fs * 1.3 - fs * 0.2));
+    g.restore();
   }
 }
 
@@ -835,10 +1018,11 @@ function frame() {
     g.globalAlpha = Math.max(0.4, visible);
     drawParts(t);
     g.globalAlpha = 1;
+    drawBubbles(t);
   }
   if (live || target > 0 || visible > 0.02 || parts.length || effects.length) {
     raf = requestAnimationFrame(frame);
   }
 }
 
-export const stage = { init, fire, calm, attach, setRunning };
+export const stage = { init, fire, calm, attach, setRunning, egg };

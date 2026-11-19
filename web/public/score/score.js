@@ -187,6 +187,7 @@ const clipInfo = {};
 let shownCaption = "";
 let linksShown = false;
 const soloOff = {};
+const presses = {};
 
 function commas(n) {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -892,6 +893,7 @@ async function startPerformance(from) {
   if (ctx && ctx.state === "suspended") await ctx.resume();
   await loadClips();
   stopOscillators();
+  stage.calm();
   windows = [];
   for (const id of Object.keys(soloOff)) clearTimeout(soloOff[id]);
   if (from === 0) shownCaption = "";
@@ -950,6 +952,15 @@ async function pressPath(path, options) {
   else fadeVoices(0.25);
   const dur = playMotif(path, ctx ? ctx.currentTime : 0);
   light(path, running ? perfNow() : 0, dur);
+  // Three quick presses of one key and the people lose their patience.
+  const at = performance.now();
+  const recent = (presses[path] || []).filter((time) => at - time < 1500);
+  recent.push(at);
+  presses[path] = recent;
+  if (recent.length >= 3) {
+    presses[path] = [];
+    stage.egg(path);
+  }
 }
 
 function bindControls() {
