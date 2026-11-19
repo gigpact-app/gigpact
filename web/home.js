@@ -27,7 +27,7 @@ function proofSection() {
     h('h2', { class: 'big' }, 'Not a simulation.'),
     h('p', { class: 'sub wide' }, 'Real transactions, tiny test amount, one tester playing both roles. Check each one in a block explorer.'),
     h('div', { class: 'ptable' }, ...rows),
-    h('p', { class: 'note' }, 'Repeated on 17 and 18 November with two more wallets (Selene and Paytaca) on newer builds: fund, accept and pay, plus a cancel and the “waiting for 1 confirmation” step seen live. The same paths, no new ones. Transaction ids are in ', link(`${REPO_URL}/tree/main/docs/evidence`, 'docs/evidence'), ' (M7, M7b, M7c).'));
+    h('p', { class: 'note' }, 'Repeated on 17 and 18 November with two more wallets (Selene and Paytaca) on newer builds: fund, accept and pay, plus a cancel and the “waiting for 1 confirmation” step seen live. The same paths, no new ones. On 19 November the worker collected after the 432-block wait (C1, transaction b1bc0584…a9b53d, block 978,057) with Paytaca, and a script ran the objection and the arbiter’s decisions on mainnet with a test key (not in the app). Transaction ids are in ', link(`${REPO_URL}/tree/main/docs/evidence`, 'docs/evidence'), ' (M7, M7b, M7c, M8, M9).'));
 }
 
 // Top banner of the home page (hackathon rule): presentation, source code, EMBER2026 donation address, pre-hackathon declaration.
