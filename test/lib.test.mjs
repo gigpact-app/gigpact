@@ -22,6 +22,7 @@ const jobFor = (chain, utxo) => declareFunding(newJob(chain), utxo);
 const throwsCode = (fn, code) => assert.throws(fn, (e) => e instanceof SpendError && e.code === code, `expected ${code}`);
 const dry = (plan) => { const r = buildTx(plan, { provider, keys, SignatureTemplate, changeLock: locks.S }); r.builder.debug(); return r; };
 const C = chainOf();
+const C3 = chainOf({ ...base(), F: 100001n }); // odd F: used by D3 to exercise the rounding of the split
 const decode = (hex) => { const tx = decodeTransactionBch(hexToBin(hex)); assert.equal(typeof tx, 'object'); return tx; };
 const vm = () => (VM_TARGET === 'BCH_2025_05' ? createVirtualMachineBch2025() : createVirtualMachineBch2026());
 // Evaluate input 0 in the libauth VM against a chosen source locking bytecode. true = accepted, string = VM rejection.
@@ -113,17 +114,18 @@ test('transaction version: serialized version is 2 for CSV spends, and below 2 i
 // ---- all 16 paths: plan shape + VM dry-run -------------------------------------------------
 for (const id of PATH_IDS) for (const phi of (['D4', 'D5', 'D6'].includes(id) ? [100, 50] : [100])) {
   test(`${id}${['D4', 'D5', 'D6'].includes(id) ? ` (phi=${phi})` : ''}: plan shape, serialized accounting and VM dry-run`, () => {
+    const CX = id === 'D3' ? C3 : C; // D3 runs on a chain with an odd F (100001) so the odd net exercises rounding; every coin carries exactly F
     const P = PATHS[id];
     const ck = P.c.includes('|') ? (phi === 100 ? 'd100' : 'd50') : P.c;
-    const u0 = at(C, ck, id === 'F1' ? C.params.F : id === 'D3' ? 100001n : 100000n); // odd net on D3 exercises rounding
-    const plan = planSpend({ chain: C, path: id, utxo: u0, sponsors: [sponsor(30000n)], feeRate: 1, ctx: { phi, dryRun: true }, job: id === 'F1' ? jobFor(C, u0) : undefined });
+    const u0 = at(CX, ck, CX.params.F); // odd net on D3 exercises rounding
+    const plan = planSpend({ chain: CX, path: id, utxo: u0, sponsors: [sponsor(30000n)], feeRate: 1, ctx: { phi, dryRun: true }, job: id === 'F1' ? jobFor(CX, u0) : undefined });
     assert.equal(plan.contractKey, ck);
-    assert.equal(binToHex(plan.input0.lockingBytecode), binToHex(C.locks[ck]), 'input 0 carries the supplied actual lock');
+    assert.equal(binToHex(plan.input0.lockingBytecode), binToHex(CX.locks[ck]), 'input 0 carries the supplied actual lock');
     assert.equal(plan.sponsors.every((s) => s.sequence === SEQ_NONFINAL), true, 'sponsor nSequence = 0xfffffffe (G6)');
-    assert.equal(plan.input0.sequence, P.csv ? Number(C.params[P.csv]) : SEQ_NONFINAL);
-    assert.equal(plan.locktime, P.cltv ? Number(C.params[P.cltv]) : 0);
+    assert.equal(plan.input0.sequence, P.csv ? Number(CX.params[P.csv]) : SEQ_NONFINAL);
+    assert.equal(plan.locktime, P.cltv ? Number(CX.params[P.cltv]) : 0);
     assert.equal(plan.outs.reduce((s, o) => s + o.amount, 0n), plan.input0.satoshis, 'conservation: contract outputs == input 0');
-    assert.ok(plan.outs.every((o) => o.amount >= C.params.dust), 'every contract output >= DUST_SAFE');
+    assert.ok(plan.outs.every((o) => o.amount >= CX.params.dust), 'every contract output >= DUST_SAFE');
     const r = dry(plan);
     // everything below is read from the serialized bytes, not from the returned object
     const tx = decode(r.hex);
@@ -217,6 +219,17 @@ test('timing guards (library refuses transactions the node would not accept yet)
   assert.ok(mk('A1', 'accepted', {}), 'non-timed paths need no context');
 });
 
+test('a coin of another amount than F at a contract address is never spent (decoy / stray), except by the F2 escape hatch', () => {
+  const next = { A1: 'accepted', A2: 'accepted', A3: 'accepted', A4: 'accepted', C1: 'requested', C2: 'requested', C3: 'requested', C4: 'requested', D1: 'd100', D2: 'd100', D3: 'd100', D4: 'd100', D5: 'd100', D6: 'd100' };
+  for (const [id, key] of Object.entries(next)) {
+    for (const v of [C.params.F - 1n, C.params.F + 1n, 1n]) {
+      throwsCode(() => planSpend({ chain: C, path: id, utxo: at(C, key, v), sponsors: [sponsor()], ctx: { phi: 100, dryRun: true } }), 'UtxoValue');
+    }
+  }
+  // F2 takes any amount (G1-01)
+  assert.ok(planSpend({ chain: C, path: 'F2', utxo: at(C, 'funded', C.params.F + 7n), sponsors: [sponsor()], ctx: {} }));
+});
+
 test('sponsor, fee-rate and output guards', () => {
   const mk = (o = {}) => planSpend({ chain: C, path: 'A1', utxo: at(C, 'accepted', 100000n), sponsors: [sponsor()], ctx: {}, ...o });
   throwsCode(() => mk({ sponsors: [] }), 'SponsorCount');
@@ -225,7 +238,7 @@ test('sponsor, fee-rate and output guards', () => {
   throwsCode(() => mk({ sponsors: [sponsor(20000n, { token: { amount: 1n, category: '00'.repeat(32) } })] }), 'SponsorToken');
   throwsCode(() => mk({ feeRate: 0 }), 'FeeRate'); throwsCode(() => mk({ feeRate: MAX_FEE_RATE + 0.5 }), 'FeeRate');
   assert.ok(mk({ feeRate: MAX_FEE_RATE }));
-  throwsCode(() => planSpend({ chain: C, path: 'D1', utxo: at(C, 'd100', C.params.fA + C.params.dust - 1n), sponsors: [sponsor()], ctx: { dryRun: true } }), 'DustOutput');
+  throwsCode(() => planSpend({ chain: C, path: 'D1', utxo: at(C, 'd100', C.params.fA + C.params.dust - 1n), sponsors: [sponsor()], ctx: { dryRun: true } }), 'UtxoValue'); // a coin below F is refused before the dust guard
   throwsCode(() => planSpend({ chain: C, path: 'Z9', utxo: at(C, 'accepted', 1n), sponsors: [sponsor()] }), 'UnknownPath');
   throwsCode(() => planSpend({ chain: C, path: 'D4', utxo: at(C, 'd100', 100000n), sponsors: [sponsor()], ctx: { phi: 75, dryRun: true } }), 'BadPhi');
   assert.throws(() => buildTx(mk(), { provider, keys, SignatureTemplate }), (e) => e.code === 'NoChangeLock');

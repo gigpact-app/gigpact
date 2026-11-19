@@ -102,6 +102,9 @@ export function planSpend({ chain: claimed, path, utxo: utxoIn, sponsors: sponso
   }
   need(typeof feeRate === 'number' && feeRate >= 1 && feeRate <= MAX_FEE_RATE, 'FeeRate', `fee rate must be in [1, ${MAX_FEE_RATE}] sat/byte`);
   if (path === 'F1') { need(job, 'K17NotDeclared', 'F1 needs the job record (K17)'); assertF1Funding(job, utxo, chain); }
+  // Every state after the funding holds exactly F (each contract pins output 0 to the input value), so a coin of another amount at a
+  // contract address is a stray or a decoy, never the pact money. F2 is the escape hatch and takes any amount (G1-01).
+  if (path !== 'F2') need(utxo.satoshis === p.F, 'UtxoValue', `${path} must spend the pact coin of exactly F (${p.F} sat), not a coin of ${utxo.satoshis} sat`);
   const F = utxo.satoshis;
   const outs = P.outs(L, F, p, phi).map(([lock, amount]) => ({ lock, amount }));
   // F2 is the escape hatch (G1-01): the contract takes any amount, so the library only enforces the SDK/network floor there.

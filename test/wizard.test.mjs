@@ -15,6 +15,7 @@ import { simWallet, derive, walletKey } from './wallet-sim.mjs';
 
 const pk = (k) => tpl(k).publicKey;
 const C = buildChain({ pk: { V: pk(keys.V), W: pk(keys.W), A: pk(keys.A) }, lock: { V: locks.V, W: locks.W, A: locks.A }, F: 100000n, fA: 2000n, tEnd: 800000n }, { provider });
+const C3 = buildChain({ pk: { V: pk(keys.V), W: pk(keys.W), A: pk(keys.A) }, lock: { V: locks.V, W: locks.W, A: locks.A }, F: 100001n, fA: 2000n, tEnd: 800000n }, { provider }); // odd F for D3 (rounding of the split)
 const roleKeys = { V: keys.V, W: keys.W, A: keys.A };
 const lockOfWallet = (name, i) => encodeLockingBytecodeP2pkh(hash160(derive(name, i)));
 let n = 0;
@@ -26,8 +27,9 @@ const change = lockOfWallet('change', 0);
 
 function prep(id, { phi = 100, sponsors = [spon(30000n)], paths = [['receive', 3]] } = {}) {
   const ck = PATHS[id].c.includes('|') ? (phi === 100 ? 'd100' : 'd50') : PATHS[id].c;
-  const u0 = at(ck, id === 'D3' ? 100001n : 100000n);
-  const plan = planSpend({ chain: C, path: id, utxo: u0, sponsors, ctx: { phi, dryRun: true }, job: id === 'F1' ? declareFunding(newJob(C), u0) : undefined });
+  const CX = id === 'D3' ? C3 : C;
+  const u0 = at(ck, CX.params.F);
+  const plan = planSpend({ chain: CX, path: id, utxo: u0, sponsors, ctx: { phi, dryRun: true }, job: id === 'F1' ? declareFunding(newJob(C), u0) : undefined });
   return prepareSign(plan, { provider, keys: roleKeys, SignatureTemplate, changeLock: change, sponsorPaths: paths });
 }
 
