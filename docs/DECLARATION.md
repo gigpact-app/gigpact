@@ -24,7 +24,7 @@ Everything in this repository: the four CashScript contracts, the transaction li
 
 ## Tools used
 
-- AI assistants helped with drafting code, tests and documentation (Claude) with an independent read-only review of the text (Gemini) and with read-only reviews of the four contract sources (Grok 4.7 in Cursor and DeepSeek in a web chat, 19 November; second opinions, not audits: `docs/SECURITY-LIMITS.md`). The author started every step, ran the tests on his own machine, signed every wallet transaction himself and decided what is published. Reviews are recorded in `docs/G1-BOUNDARIES.md` with their limits (for example, a review that only reads text does not reproduce test results).
+- AI assistants helped with drafting code, tests and documentation (Claude) with an independent read-only review of the text (Gemini) and with read-only reviews of the four contract sources (Grok 4.7 in Cursor and DeepSeek in a web chat, 19 November; DeepSeek a second time with the transaction library; second opinions, not audits: `docs/SECURITY-LIMITS.md`). The author started every step, ran the tests on his own machine, signed every wallet transaction himself and decided what is published. Reviews are recorded in `docs/G1-BOUNDARIES.md` with their limits (for example, a review that only reads text does not reproduce test results).
 - Third-party libraries: CashScript 0.14.0, libauth, `@wizardconnect/core` 0.2.10 and `@wizardconnect/dapp` 0.2.7 (LGPL-3.0, used as unmodified npm packages), `qrcode-generator`, Vite.
 
 ## What is not claimed

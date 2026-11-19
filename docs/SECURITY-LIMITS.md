@@ -10,8 +10,9 @@ GigPact is a prototype for small amounts. It has **no independent audit**. This 
 | Text review | Gemini | documents only | recorded in [G1-BOUNDARIES.md](G1-BOUNDARIES.md) |
 | Contract review, 19 Nov 2026 | Grok 4.7 (Medium) in Cursor, an empty workspace | the four `.cash` sources and a short description | [second-model-review-grok-4.7.md](reviews/second-model-review-grok-4.7.md), raw and unedited |
 | Contract review, 19 Nov 2026 | DeepSeek, web chat, file upload | the four `.cash` sources, the description and the real parameter values | [second-model-review-deepseek.md](reviews/second-model-review-deepseek.md), raw and unedited |
+| Second round, 19 Nov 2026 | DeepSeek, web chat, file upload, new prompt | the four `.cash` sources plus the transaction library: `src/chain.mjs`, `src/spend.mjs`, `src/wizard.mjs`, `src/errors.mjs`, `web/pact.js`, `web/config.js` | [second-model-review-deepseek-2-code.md](reviews/second-model-review-deepseek-2-code.md), raw and unedited |
 
-The Grok and DeepSeek reviews are read-only passes by models from other vendors. They are second opinions, **not audits**. Each reviewer saw only the contracts, not the app, the transaction library or the tests. The prompt of the DeepSeek review is in [reviews/review-prompt.md](reviews/review-prompt.md); Grok got the same text without the paragraph of real parameter values.
+The Grok and DeepSeek reviews are read-only passes by models from other vendors. They are second opinions, **not audits**. The first two reviewers saw only the contracts. The second DeepSeek round also saw the transaction library, but not `src/k17.mjs`, the browser UI, the chain provider or the key storage, and not the tests. The prompt of the first DeepSeek review is in [reviews/review-prompt.md](reviews/review-prompt.md) (Grok got the same text without the paragraph of real parameter values); the prompt of the second round is in [reviews/review-prompt-2.md](reviews/review-prompt-2.md).
 
 ## Result of the second-model reviews
 
@@ -44,7 +45,24 @@ New and our check:
 | D1 | A funding output that carries a CashToken can never be spent, because every path requires token-free inputs | Confirmed for the contracts. In the app: the organizer page counts only an exact, token-free output as funding, the worker page refuses a funding output with a token ("The funding output carries a token, which this pact does not accept."), and spending requires token-free contract and sponsor inputs (`web/app.js`, `web/accept.js`, `src/spend.mjs`). Reaching it needs a token-aware wallet that attaches a token on purpose or by mistake; the loss is the organizer's own. | Known limit, small |
 | D2 | Whether the sponsor inputs are signed with SIGHASH_ALL | Yes, the library rejects any sponsor signature that is not hash type 0x61 (ALL, FORKID, UTXOS) and compares the signed transaction with the expected one before it is used (`verifySigned` in `src/wizard.mjs`, tests in `test/wizard.test.mjs`). | Answered |
 
-Each review found something the other did not: Grok the claim / dispute race after T_A4 and the lost-key cases, DeepSeek the token-bearing funding output. Neither found a way to take money from a correctly parameterized pact.
+Each review found something the others did not: Grok the claim / dispute race after T_A4 and the lost-key cases, DeepSeek the token-bearing funding output and, in the second round, the missing amount check on later spends. None found a way to take money from a correctly parameterized pact.
+
+## Second DeepSeek round (contracts and transaction library): our check
+
+The reviewer again found no way to take money from a correctly parameterized pact with only one role key outside the known timing cases, and found no hole in `verifySigned` (a wallet that returns a different transaction is rejected). Its findings, checked against the code:
+
+| # | Finding (short) | Our check | Status |
+|---|---|---|---|
+| F-1 | A pact link is not signed, so someone who changes it in transit can swap the worker key and payout address | True as stated: the link is plain data, and the payout address is not bound to the key. By design the organizer is told on the page to confirm the worker's payout address with the worker through another channel before funding, and a swapped link shows a different address. This check is by a person, not by code. An optional short check code shown on both pages is not built. | Known limit, partly covered |
+| F-2 | Only the first spend (F1) checks that the coin has the agreed amount; every later spend takes the amount from whatever coin the provider shows | Real, small. The reviewer did not get `src/k17.mjs`, which does the F1 check. For the other paths the library now refuses a coin whose value is not the agreed amount, except the cancel path F2 (code `UtxoValue`, new test with a decoy coin). It cannot make a hiding provider show the real coin. | Fixed in the library |
+| F-3 | The library and the link accept an event end in the past; `MIN_LEAD_BLOCKS` looks unused | The constant is used in the browser UI (`web/app.js`, which the reviewer did not see) and the organizer page refuses a pact that starts less than 6 blocks before the end. The library alone does not check it. | False alarm for the app; library unchanged |
+| F-4 | The link and the terms fingerprint do not include the fixed settings (arbiter fee, grace, waits, dust, arbiter key) | True. Changing one of them changes every contract address, so a pact funded under older settings could not be rebuilt by the new build. Rule: do not change `web/config.js` constants while pacts are open. | Known limit, rule written here |
+| F-5 | The code only tests `type === 'p2pkh'`, so token-aware addresses may not be refused | libauth reports a token-aware address as a different type (`p2pkhWithTokens`), so it is refused. | False alarm |
+| F-6 | The plan object holds byte arrays that can still be changed | Only code in the same page could do that; a wallet answer cannot. | Info |
+| F-7 | Local signing uses one key for all sponsor inputs | Only the local test path; the wallet path signs per sponsor. | Info |
+| F-8 | The fee error message names the wrong dust floor for P2SH32 change | Text only. | Info |
+
+The reviewer also states, rightly, that all chain data comes from the provider: the app reads two Electrum servers one at a time and does not compare their answers. A provider that lies can hide a coin or delay a spend; it cannot move money, because the transaction is signed by the keys and checked before it is sent.
 
 ## What a lost key does
 

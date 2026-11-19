@@ -63,7 +63,7 @@ Levels are kept separate on purpose.
 | Not tested on a real wallet or mainnet | A4, C1, C2 (C1, collect after 432 blocks, is planned for 19 Nov), D1–D6. Of these, regtest has run A4, C1, C2 and D1–D6 |
 | Not verified | Selene for paths other than F1 and A1; token-carrying inputs; the dispute paths with a real arbiter (the app uses a discarded demo arbiter key, so disputes cannot be decided and are closed in the UI) |
 
-`npm test` runs 240 tests (contract VM, library, web logic). Regtest tests need a local BCHN node (`npm run test:regtest`). Full notes: [docs/G1-BOUNDARIES.md](docs/G1-BOUNDARIES.md).
+`npm test` runs 241 tests (contract VM, library, web logic). Regtest tests need a local BCHN node (`npm run test:regtest`). Full notes: [docs/G1-BOUNDARIES.md](docs/G1-BOUNDARIES.md).
 
 ## Honest limits
 
