@@ -88,7 +88,7 @@ function quietSection() {
     h('div', { class: 'qrow' },
       col('EVENT ENDS · WITHIN 7 DAYS', 'You claim', 'After the event end you press Claim, and you need to do it within 7 days. The pact checks the block height, not anyone’s word.'),
       col('432 BLOCKS · ABOUT 3 DAYS', 'Waiting period', 'A window in which the organizer can pay you at once, or object.'),
-      col('THEN', 'You collect', 'If nobody objects, no signature from the organizer is needed. The fee goes to your payout address.')),
+      col('THEN', 'You collect', 'If nobody objects, no signature from the organizer is needed. The fee goes to your payout address. The network fee is paid by the wallet that triggers the payout, not taken from the locked fee.')),
     h('p', { class: 'note' }, 'The claim and the organizer’s answers (pay now, waive) have run on mainnet. Collecting after the 432 blocks is still being tested. If you do not claim within 7 days after the event end, the organizer can open a dispute that ends 50/50 by default.'));
 }
 
