@@ -1,0 +1,82 @@
+{
+ "lock": {
+  "seconds": 8.54,
+  "music": 6.01
+ },
+ "show": {
+  "seconds": 15.07,
+  "music": 13.04
+ },
+ "wait": {
+  "seconds": 9.2,
+  "music": 8.65
+ },
+ "finale": {
+  "seconds": 10.81,
+  "music": 7.27
+ },
+ "F1": {
+  "seconds": 6.14,
+  "music": 3.6
+ },
+ "F2": {
+  "seconds": 7.39,
+  "music": 4.34
+ },
+ "A1": {
+  "seconds": 6.58,
+  "music": 4.05
+ },
+ "A2": {
+  "seconds": 9.85,
+  "music": 6.82
+ },
+ "A3": {
+  "seconds": 5.88,
+  "music": 3.33
+ },
+ "A4": {
+  "seconds": 12.04,
+  "music": 9.0
+ },
+ "C1": {
+  "seconds": 14.03,
+  "music": 10.0
+ },
+ "C2": {
+  "seconds": 6.48,
+  "music": 3.43
+ },
+ "C3": {
+  "seconds": 8.05,
+  "music": 5.0
+ },
+ "C4": {
+  "seconds": 10.76,
+  "music": 7.73
+ },
+ "D1": {
+  "seconds": 12.54,
+  "music": 9.0
+ },
+ "D2": {
+  "seconds": 12.25,
+  "music": 8.71
+ },
+ "D3": {
+  "seconds": 9.61,
+  "music": 6.07
+ },
+ "D4": {
+  "seconds": 13.04,
+  "music": 9.0
+ },
+ "D5": {
+  "seconds": 7.47,
+  "music": 4.44
+ },
+ "D6": {
+  "seconds": 12.12,
+  "music": 8.57
+ }
+}

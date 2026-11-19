@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>The Gig Score</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./score.css">
+</head>
+<body>
+  <header class="banner">
+    <div class="banner-inner">
+      <div class="titles">
+        <h1>The Gig Score</h1>
+        <p class="tagline">A Bitcoin Cash payment guarantee for gig workers, played as an instrument.</p>
+      </div>
+      <div class="donate">
+        <p class="donate-label">EMBER2026 donations (CashTokens address)</p>
+        <div class="addr-row">
+          <code id="donate-addr">bitcoincash:zpgcz25vg4f2rqd95qgs5qquwkzcuumy6g5lhutl8r</code>
+          <button type="button" id="copy-addr" class="text-btn">Copy</button>
+        </div>
+      </div>
+      <nav class="banner-links" aria-label="Project">
+        <a href="https://gigpact-app.github.io/gigpact/" target="_blank" rel="noopener noreferrer">the app</a>
+        <a href="https://github.com/gigpact-app/gigpact" target="_blank" rel="noopener noreferrer">source</a>
+        <span class="before">Before the hackathon
+          <a href="https://github.com/gigpact-app/gigpact/blob/main/docs/DECLARATION.md" target="_blank" rel="noopener noreferrer">Declaration</a>
+          <a href="https://github.com/gigpact-app/gigpact/blob/main/docs/BEFORE-AFTER.md" target="_blank" rel="noopener noreferrer">Before / After</a>
+        </span>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <p id="load-error" class="notice" hidden></p>
+    <noscript><p class="notice">The Gig Score needs JavaScript to load the score and to play sound.</p></noscript>
+
+    <div id="piece" hidden>
+      <section class="transport" aria-label="Performance">
+        <div class="transport-buttons">
+          <button type="button" id="play" class="primary">Play the performance</button>
+          <button type="button" id="pause" disabled>Pause</button>
+          <button type="button" id="stop" disabled>Stop</button>
+          <button type="button" id="mute" aria-pressed="false">Mute</button>
+        </div>
+        <div class="progress" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="85" aria-valuenow="0" aria-label="Performance progress">
+          <span id="progress-bar"></span>
+        </div>
+        <p id="caption" class="caption" aria-live="polite">Press Play the performance, or play a key.</p>
+        <p id="now" class="now" hidden><span class="dot" aria-hidden="true"></span><span id="now-text"></span></p>
+        <p id="audio-note" class="muted" hidden></p>
+      </section>
+
+      <section aria-label="Instrument">
+        <ul class="legend">
+          <li><span class="swatch real" aria-hidden="true"></span> proven on mainnet, real wallet</li>
+          <li><span class="swatch script" aria-hidden="true"></span> ran on mainnet by script, test key</li>
+          <li><span class="swatch regtest" aria-hidden="true"></span> test chain only, not on mainnet</li>
+        </ul>
+        <ul class="legend moods" aria-label="Colour of the key that is playing">
+          <li><span class="swatch" data-mood="joy" aria-hidden="true"></span> joy: the worker is paid</li>
+          <li><span class="swatch" data-mood="sad" aria-hidden="true"></span> sad: the money goes back</li>
+          <li><span class="swatch" data-mood="tense" aria-hidden="true"></span> tension: a dispute</li>
+          <li><span class="swatch" data-mood="split" aria-hidden="true"></span> two voices meet: a split</li>
+          <li><span class="swatch" data-mood="time" aria-hidden="true"></span> time decides</li>
+        </ul>
+        <p class="listen">Listen: bright and rising when the worker is paid, soft and falling when the money goes back, tense when there is a dispute. The key that is playing lights up in its colour.</p>
+        <p class="hint">From the keyboard: 1 and 2 for Accept, 3 to 6 for After the event, 7 to 0 for Claim stage, then Q W E R T Y for Dispute.</p>
+        <div id="stages"></div>
+      </section>
+
+      <section class="proof" id="proof" aria-live="polite">
+        <h2>Proof</h2>
+        <p class="muted">Press a key to read its proof. Sound is optional.</p>
+      </section>
+
+      <section class="strip-section" aria-label="Block heights">
+        <h2>The score</h2>
+        <p class="muted">Real-wallet transactions by block height, from 977,601 to 978,057.</p>
+        <p class="wait-label">Waiting period: 432 blocks after the claim (about 3 days)</p>
+        <div class="scale" aria-hidden="true"><span>977,601</span><span>978,057</span></div>
+        <div id="plot" class="plot"></div>
+        <p>The markers come from different test pacts; each one is a real transaction.</p>
+        <p>A4 and D4 are test-chain only. They are not placed on this axis.</p>
+        <div class="script-lane">
+          <p class="lane-label">Script run, 19 Nov, after block 978,049</p>
+          <div id="script-lane" class="lane-keys"></div>
+        </div>
+      </section>
+
+      <section id="proven-links" class="links-block" hidden>
+        <h2>Eight real-wallet transactions</h2>
+        <ul id="proven-list"></ul>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>Prototype on Bitcoin Cash mainnet, built solo for BCH BLAZE 2026. The dispute steps are not offered in the app yet. Use small amounts. No independent audit.</p>
+    <p>Every transaction here is real and can be checked in a block explorer.</p>
+  </footer>
+
+  <canvas id="stage" aria-hidden="true"></canvas>
+  <script type="module" src="./score.js"></script>
+</body>
+</html>

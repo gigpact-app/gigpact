@@ -1,0 +1,114 @@
+{
+ "note": "Built from web/home.js (real-wallet table), docs/evidence/M8 and M9. Blocks for script-run paths not recorded here.",
+ "fund": {
+  "tx": "6e715ef3ff155358cdcc1283bd5eeb194b9c6a51e4c679477fbeb205ccc86b4a",
+  "block": 977601,
+  "what": "Organizer locks the fee"
+ },
+ "paths": [
+  {
+   "path": "F1",
+   "level": "real-wallet-mainnet",
+   "tx": "e5d41659ee5bba9393cf2b980a3b6dbd32f68910928a8902711b05fb39bb592b",
+   "block": 977601,
+   "what": "Worker accepts, money bound to the worker"
+  },
+  {
+   "path": "F2",
+   "level": "real-wallet-mainnet",
+   "tx": "ad5a0abff7f6c8695268cd666aa6f6ed7510b684198f657e2bbdf36469f2df03",
+   "block": 977609,
+   "what": "Organizer takes the money back before accept"
+  },
+  {
+   "path": "A1",
+   "level": "real-wallet-mainnet",
+   "tx": "f03fc1ef4ddd8b007c3a109f608b96e999d0b95631575e9a66258ece495ba163",
+   "block": 977604,
+   "what": "Organizer pays the worker"
+  },
+  {
+   "path": "A2",
+   "level": "real-wallet-mainnet",
+   "tx": "611a52917f957a0ea806e72cbd50c0ffb3f5352573463c404e4b1d2f6ec8fd7c",
+   "block": 977635,
+   "what": "Worker gives the money back after accept"
+  },
+  {
+   "path": "A3",
+   "level": "real-wallet-mainnet",
+   "tx": "62fbc1aba0731717ff6807ebfb5dbf39f71f7851b26e446fa0e853925bb900cf",
+   "block": 977619,
+   "what": "Worker claims after the event end"
+  },
+  {
+   "path": "A4",
+   "level": "regtest-only",
+   "tx": null,
+   "block": null
+  },
+  {
+   "path": "C1",
+   "level": "real-wallet-mainnet",
+   "tx": "b1bc0584f5682d3d2b975632f48b8638ace115d0445b1ec4e7697a0869a9b53d",
+   "block": 978057,
+   "what": "Worker collects after the 432-block wait"
+  },
+  {
+   "path": "C2",
+   "level": "script-mainnet-test-key",
+   "tx": "2ac432dcd6513d2b8f3f83a07fb90dc335188b8ca09428c06c798883fa446f34",
+   "block": null
+  },
+  {
+   "path": "C3",
+   "level": "real-wallet-mainnet",
+   "tx": "9cf26120e411932e019752a6d8e59b22a72dc81341505ff2be0d6923fa2f8690",
+   "block": 977647,
+   "what": "Organizer pays at the claim stage"
+  },
+  {
+   "path": "C4",
+   "level": "real-wallet-mainnet",
+   "tx": "79a6782d58ff7c324bcaac18e16309a2cf9d5db63933637abc25e66703ef380c",
+   "block": 977648,
+   "what": "Worker waives at the claim stage"
+  },
+  {
+   "path": "D1",
+   "level": "script-mainnet-test-key",
+   "tx": "a406ccd1cbe43acb1add935b1bf6071c2baec52de797290e40d796f93c7d62f5",
+   "block": null
+  },
+  {
+   "path": "D2",
+   "level": "script-mainnet-test-key",
+   "tx": "98d299da39b1f5170aace65e22ce4b45329991e11cadce6bfbcf5d82bfb791e6",
+   "block": null
+  },
+  {
+   "path": "D3",
+   "level": "script-mainnet-test-key",
+   "tx": "acdd71f95c11a002fc73ee8985dbb4dc045ba13d1c77fb21e522cfa0d17bf16d",
+   "block": null
+  },
+  {
+   "path": "D4",
+   "level": "regtest-only",
+   "tx": null,
+   "block": null
+  },
+  {
+   "path": "D5",
+   "level": "script-mainnet-test-key",
+   "tx": "2a4c93dabf028b2a6fc956504f34eca16d12f3ab131fc5029ada47b5cde3506d",
+   "block": null
+  },
+  {
+   "path": "D6",
+   "level": "script-mainnet-test-key",
+   "tx": "234ae97c3602aed6caf47f0c6bd3c968fa7ccd9c767b24e4ff2a2a13ce8d5992",
+   "block": null
+  }
+ ]
+}
