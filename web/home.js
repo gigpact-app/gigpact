@@ -26,7 +26,8 @@ function proofSection() {
     h('div', { class: 'eyebrow' }, 'REAL RUN · BITCOIN CASH MAINNET · 16 NOV 2026'),
     h('h2', { class: 'big' }, 'Not a simulation.'),
     h('p', { class: 'sub wide' }, 'Real transactions, tiny test amount, one tester playing both roles. Check each one in a block explorer.'),
-    h('div', { class: 'ptable' }, ...rows));
+    h('div', { class: 'ptable' }, ...rows),
+    h('p', { class: 'note' }, 'Repeated on 17 and 18 November with two more wallets (Selene and Paytaca) on newer builds: fund, accept and pay, plus a cancel and the “waiting for 1 confirmation” step seen live. The same paths, no new ones. Transaction ids are in ', link(`${REPO_URL}/tree/main/docs/evidence`, 'docs/evidence'), ' (M7, M7b, M7c).'));
 }
 
 // Top banner of the home page (hackathon rule): presentation, source code, EMBER2026 donation address, pre-hackathon declaration.
