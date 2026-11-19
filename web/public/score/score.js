@@ -396,8 +396,8 @@ function track(node) {
   return node;
 }
 
-function stopOscillators() {
-  fadeVoices(0.7);
+function stopOscillators(fade) {
+  fadeVoices(typeof fade === "number" ? fade : 0.7);
   if (ctx && master) {
     const now = ctx.currentTime;
     master.gain.cancelScheduledValues(now);
@@ -919,12 +919,12 @@ function pausePerformance() {
   $("pause").disabled = true;
 }
 
-function stopPerformance() {
+function stopPerformance(fade) {
   running = false;
   paused = false;
   pausedAt = 0;
   cancelAnimationFrame(raf);
-  stopOscillators();
+  stopOscillators(fade);
   stage.calm();
   windows = [];
   for (const id of Object.keys(soloOff)) clearTimeout(soloOff[id]);
@@ -945,7 +945,9 @@ async function pressPath(path, options) {
   ensureAudio();
   if (ctx && ctx.state === "suspended") ctx.resume();
   await loadClips();
-  if (!running) fadeVoices(0.25);
+  // A key pressed during the performance ends it, so the two never mix.
+  if (running) stopPerformance(0.25);
+  else fadeVoices(0.25);
   const dur = playMotif(path, ctx ? ctx.currentTime : 0);
   light(path, running ? perfNow() : 0, dur);
 }
