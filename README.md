@@ -10,6 +10,7 @@ Built solo for BCH BLAZE 2026 (DoraHacks). Prototype on Bitcoin Cash **mainnet**
 - Live app (mainnet prototype, small amounts only): https://gigpact-app.github.io/gigpact/
 - Pre-hackathon declaration: [docs/DECLARATION.md](docs/DECLARATION.md)
 - Before / After: [docs/BEFORE-AFTER.md](docs/BEFORE-AFTER.md)
+- Security and limits (reviews, findings, what a lost key does): [docs/SECURITY-LIMITS.md](docs/SECURITY-LIMITS.md)
 
 ## Judges: try it in 2 minutes
 
@@ -48,7 +49,7 @@ The happy path fund → accept → pay has run once on Bitcoin Cash mainnet with
 | Accept (F1) | [`e5d41659…fb39bb592b`](https://3xpl.com/bitcoin-cash/transaction/e5d41659ee5bba9393cf2b980a3b6dbd32f68910928a8902711b05fb39bb592b) | 977,601 |
 | Pay (A1) | [`f03fc1ef…495ba163`](https://3xpl.com/bitcoin-cash/transaction/f03fc1ef4ddd8b007c3a109f608b96e999d0b95631575e9a66258ece495ba163) | 977,604 |
 
-This is a test pact where the tester played both roles. It is shown so you can check the chain without a wallet. Details: [docs/evidence/M1-mainnet-F1.md](docs/evidence/M1-mainnet-F1.md), including an incident we kept in the record. A second real-wallet run, the cancel path (F2, block 977,609), is in [docs/evidence/M2-mainnet-F2.md](docs/evidence/M2-mainnet-F2.md). The claim after the event end (A3, block 977,619) is in [docs/evidence/M3-mainnet-A3.md](docs/evidence/M3-mainnet-A3.md). The worker waiving right after accepting (A2, block 977,635) is in [docs/evidence/M4-mainnet-A2.md](docs/evidence/M4-mainnet-A2.md), the organizer paying at the claim stage (C3, block 977,647) in [docs/evidence/M5-mainnet-C3.md](docs/evidence/M5-mainnet-C3.md) and the worker waiving at the claim stage (C4, block 977,648) in [docs/evidence/M6-mainnet-C4.md](docs/evidence/M6-mainnet-C4.md). A second wallet, Selene, signed the accept and the pay (F1, A1, blocks 977,740 / 977,741) in [docs/evidence/M7-mainnet-selene-F1-A1.md](docs/evidence/M7-mainnet-selene-F1-A1.md).
+This is a test pact where the tester played both roles. It is shown so you can check the chain without a wallet. Details: [docs/evidence/M1-mainnet-F1.md](docs/evidence/M1-mainnet-F1.md), including an incident we kept in the record. A second real-wallet run, the cancel path (F2, block 977,609), is in [docs/evidence/M2-mainnet-F2.md](docs/evidence/M2-mainnet-F2.md). The claim after the event end (A3, block 977,619) is in [docs/evidence/M3-mainnet-A3.md](docs/evidence/M3-mainnet-A3.md). The worker waiving right after accepting (A2, block 977,635) is in [docs/evidence/M4-mainnet-A2.md](docs/evidence/M4-mainnet-A2.md), the organizer paying at the claim stage (C3, block 977,647) in [docs/evidence/M5-mainnet-C3.md](docs/evidence/M5-mainnet-C3.md) and the worker waiving at the claim stage (C4, block 977,648) in [docs/evidence/M6-mainnet-C4.md](docs/evidence/M6-mainnet-C4.md). A second wallet, Selene, signed the accept and the pay (F1, A1, blocks 977,740 / 977,741) in [docs/evidence/M7-mainnet-selene-F1-A1.md](docs/evidence/M7-mainnet-selene-F1-A1.md). On 18 November the fund, accept and pay ran again with Paytaca on the current build ([M7b](docs/evidence/M7b-mainnet-paytaca-full-flow-new-build.md)), and the “waiting for 1 confirmation” step was seen live before a cancel ([M7c](docs/evidence/M7c-mainnet-confirmation-gate-live.md)).
 
 ## What is tested, and at which level
 
@@ -62,7 +63,7 @@ Levels are kept separate on purpose.
 | Not tested on a real wallet or mainnet | A4, C1, C2 (C1, collect after 432 blocks, is planned for 19 Nov), D1–D6. Of these, regtest has run A4, C1, C2 and D1–D6 |
 | Not verified | Selene for paths other than F1 and A1; token-carrying inputs; the dispute paths with a real arbiter (the app uses a discarded demo arbiter key, so disputes cannot be decided and are closed in the UI) |
 
-`npm test` runs 228 tests (contract VM, library, web logic). Regtest tests need a local BCHN node (`npm run test:regtest`). Full notes: [docs/G1-BOUNDARIES.md](docs/G1-BOUNDARIES.md).
+`npm test` runs 240 tests (contract VM, library, web logic). Regtest tests need a local BCHN node (`npm run test:regtest`). Full notes: [docs/G1-BOUNDARIES.md](docs/G1-BOUNDARIES.md).
 
 ## Honest limits
 
