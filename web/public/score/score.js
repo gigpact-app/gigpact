@@ -1,4 +1,4 @@
-import { stage } from "./stage.js";
+import { stage } from "./stage.js?v=20261120b";
 // Edit motifs here. Each note is [midi, beats]. One beat = 0.75 s (80 bpm).
 // D3=50 A3=57 D4=62 E4=64 F#4=66 G4=67 A4=69 B4=71 C#5=73 D5=74 E5=76 F5=77 F#5=78 A5=81
 // dir: up rises toward the worker, down falls back to the organizer,
