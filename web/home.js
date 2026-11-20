@@ -77,7 +77,7 @@ function cueCard() {
 
 function factsRow() {
   const f = (n, t) => h('div', { class: 'fact' }, h('div', { class: 'fn' }, n), h('div', { class: 'ft' }, t));
-  return h('div', { class: 'facts' }, f('4', 'CashScript contracts'), f('16', 'spend paths, fixed rules'), f('8', 'paths run on mainnet with a real wallet so far'), f('MIT', 'open source, public repository'));
+  return h('div', { class: 'facts' }, f('4', 'CashScript contracts'), f('16', 'spend paths: the only moves the money can make, all with fixed rules'), f('8', 'paths run on mainnet with a real wallet so far'), f('MIT', 'open source, public repository'));
 }
 
 function quietSection() {

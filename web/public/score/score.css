@@ -165,6 +165,7 @@ button:disabled { color: var(--muted); cursor: default; }
 .hint { font-size: 0.92rem; margin: 0.35rem 0 0.8rem; }
 
 .listen { margin: 0.55rem 0 0.2rem; }
+.intro { margin: 0.6rem 0 0.4rem; max-width: 40rem; }
 
 .badge {
   display: inline-block;
@@ -412,6 +413,8 @@ footer {
   .keys { display: grid; grid-template-columns: 1fr 1fr; }
   .key { min-width: 0; }
   h1 { font-size: 1.45rem; }
+  /* room for the stage strip, so the last lines can scroll clear of it */
+  footer { padding-bottom: 16rem; }
 }
 
 @media (min-width: 900px) {

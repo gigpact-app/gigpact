@@ -66,10 +66,10 @@ const MOOD = {
   D1: "joy", D2: "sad", D3: "split", D4: "time", D5: "joy", D6: "sad"
 };
 const MOOD_WORD = {
-  joy: "joy, the worker is paid",
-  sad: "sad, the money goes back",
-  tense: "tension, a dispute",
-  split: "two voices meet, a split",
+  joy: "the worker is paid",
+  sad: "the money goes back",
+  tense: "a dispute",
+  split: "the money is split",
   time: "time decides",
   calm: "the story"
 };
@@ -755,7 +755,7 @@ function showNow(item) {
   }
   node.hidden = false;
   node.dataset.mood = item.mood || "calm";
-  const text = `${item.label}, ${MOOD_WORD[item.mood || "calm"]}`;
+  const text = `${item.label}: ${MOOD_WORD[item.mood || "calm"]}`;
   if ($("now-text").textContent !== text) $("now-text").textContent = text;
 }
 

@@ -999,11 +999,15 @@ function frame() {
   g.clearRect(0, 0, W, H);
   if (visible > 0.01) {
     if (L.mode === "strip") {
-      const grad = g.createLinearGradient(0, H - 150, 0, H);
+      // On a phone the stage sits in a bottom strip. The backing is solid under the
+      // actors and the speech bubbles, so page text never shows through them.
+      const top = Math.max(0, H - 250);
+      const grad = g.createLinearGradient(0, top, 0, H);
       grad.addColorStop(0, "rgba(11,12,14,0)");
-      grad.addColorStop(1, `rgba(11,12,14,${0.9 * visible})`);
+      grad.addColorStop(0.22, `rgba(11,12,14,${visible})`);
+      grad.addColorStop(1, `rgba(11,12,14,${visible})`);
       g.fillStyle = grad;
-      g.fillRect(0, H - 150, W, 150);
+      g.fillRect(0, top, W, H - top);
     }
     drawAmbient(t);
     drawSpot(t);
