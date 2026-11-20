@@ -9,6 +9,8 @@ Built solo for BCH BLAZE 2026 (DoraHacks). Prototype on Bitcoin Cash **mainnet**
 - Repository: https://github.com/gigpact-app/gigpact
 - Live app (mainnet prototype, small amounts only): https://gigpact-app.github.io/gigpact/
 - The Gig Score (Media Track): a playable explainer, 16 keys for 16 contract paths: https://gigpact-app.github.io/gigpact/score/ (30-second video: https://youtu.be/qm_PvhxpErs)
+- Mainnet demo video (narrated, AI voice-over, 2:10): https://youtu.be/Yx3IygXy7HY
+- Write-up (Medium): https://medium.com/@ozan.t1992/gigpact-a-payment-guarantee-for-gig-workers-built-on-bitcoin-cash-cd917508b65f
 - Pre-hackathon declaration: [docs/DECLARATION.md](docs/DECLARATION.md)
 - Before / After: [docs/BEFORE-AFTER.md](docs/BEFORE-AFTER.md)
 - Security and limits (reviews, findings, what a lost key does): [docs/SECURITY-LIMITS.md](docs/SECURITY-LIMITS.md)
