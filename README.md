@@ -8,6 +8,7 @@ Built solo for BCH BLAZE 2026 (DoraHacks). Prototype on Bitcoin Cash **mainnet**
 
 - Repository: https://github.com/gigpact-app/gigpact
 - Live app (mainnet prototype, small amounts only): https://gigpact-app.github.io/gigpact/
+- The Gig Score (Media Track): a playable explainer, 16 keys for 16 contract paths: https://gigpact-app.github.io/gigpact/score/ (30-second video: https://youtu.be/qm_PvhxpErs)
 - Pre-hackathon declaration: [docs/DECLARATION.md](docs/DECLARATION.md)
 - Before / After: [docs/BEFORE-AFTER.md](docs/BEFORE-AFTER.md)
 - Security and limits (reviews, findings, what a lost key does): [docs/SECURITY-LIMITS.md](docs/SECURITY-LIMITS.md)
@@ -88,6 +89,10 @@ npm run preview:web   # serves http://127.0.0.1:4173
 ```
 
 Open the page and create a request as the worker (minimum fee 10,000 sat). Open the link in a second browser window or profile as the organizer, fund the shown address with exactly that amount, then accept as the worker.
+
+## Media Track: The Gig Score
+
+`web/public/score/` is a separate page that teaches the contract by playing it. It is a 16-key instrument: each key is one real spend path, with recorded music for its mood, a small stage where the organizer, the worker and the arbiter act it out, and a link to the real mainnet transaction as proof. Every key shows how it was proven (real wallet, script run on mainnet, or test chain only). It does not change the app. The music was composed with AI assistance (Claude) and rendered with the GeneralUser GS SoundFont (see `web/public/score/audio/CREDITS.md`).
 
 ## Layout
 

@@ -1,6 +1,6 @@
 # Before / After
 
-This page compares the state at hackathon kick-off (14 November 2026) with the state of this repository now (18 November 2026). The BCH BLAZE project presentation (made with the official template) is linked from the banner at the top of the app's home page.
+This page compares the state at hackathon kick-off (14 November 2026) with the state of this repository now (20 November 2026). The BCH BLAZE project presentation (made with the official template) is linked from the banner at the top of the app's home page.
 
 | Topic | Before (kick-off) | After (now) |
 |---|---|---|
