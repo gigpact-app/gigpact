@@ -146,7 +146,7 @@ async function pactScreen(code) {
   if (!p.pkV) { // organizer, step 1: refund address -> V key -> funding address
     if (mineW) { // the worker opened their own request link: it is meant for the organizer
       const own = `${location.origin}${location.pathname}#/pact/${code}`;
-      wrap.append(h('div', { class: 'grid2' }, h('div', { class: 'panel' }, h('h2', {}, 'This is your request link'),
+      wrap.append(h('div', { class: 'grid2' }, h('div', {}, h('div', { class: 'panel' }, h('h2', {}, 'This is your request link'),
         h('p', { class: 'sub' }, 'Send it to the organizer. They open it, enter a refund address and get the address to fund. Nothing is locked until they pay.'),
         h('div', { class: 'addr' }, own), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small', type: 'button' }, 'Copy link'); b.addEventListener('click', () => copy(own, b)); return b; })()),
         h('p', { class: 'note' }, 'This link never changes. After the organizer funds the pact, they send you a different, longer link. Open that one to accept, or paste it below.'),
@@ -161,7 +161,7 @@ async function pactScreen(code) {
             location.hash = `#/pact/${c}`;
           });
           return h('div', {}, input, msg, h('div', { class: 'row' }, go));
-        })()),
+        })()), backupPanel(mineW.sk, 'worker')),
         pass(p, { state: 'Waiting for the organizer’s reply', stateClass: 'warn', seed: code })));
       fillEta();
       return;
