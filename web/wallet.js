@@ -24,14 +24,22 @@ export function reconnectNote(stepEl, ms = 25000) {
 
 export function qrFor(text) { const q = qrcode(0, 'L'); q.addData(text); q.make(); return q; }
 
+// The credentials of the stored session, or none. "Use another wallet" asks for a fresh pairing: the stored session must then be wiped
+// first, otherwise the dead credentials are loaded again and the old, silent session comes back instead of a new QR code.
+export function storedCredentials(mgr, fresh) {
+  if (fresh) { try { mgr.clearStoredSession(); } catch { /* nothing stored */ } return { existing: undefined, stored: null }; }
+  const stored = mgr.loadStoredSession();
+  const existing = stored && stored.walletPublicKey ? { privateKey: stored.privateKey, secret: stored.secret, walletPublicKey: stored.walletPublicKey } : undefined;
+  return { existing, stored };
+}
+
 // onChange(state, info): state = 'pairing' | 'connecting' | 'ready' | 'lost'
 export function connect(onChange, { fresh = false } = {}) {
   if (!fresh && cur) { if (onChange) { listeners.add(onChange); onChange(cur.state, cur); } return cur; }
   disconnect(false);
   if (onChange) listeners.add(onChange);
   const mgr = new DappConnectionManager('GigPact', undefined, { session: { key: SESSION_KEY } });
-  let existing; const stored = mgr.loadStoredSession();
-  if (stored && stored.walletPublicKey) existing = { privateKey: stored.privateKey, secret: stored.secret, walletPublicKey: stored.walletPublicKey };
+  const { existing, stored } = storedCredentials(mgr, fresh);
   const me = { mgr, relay: null, uri: '', qrUri: '', state: existing ? 'connecting' : 'pairing' };
   const set = (s) => { me.state = s; for (const f of [...listeners]) { try { f(s, me); } catch { /* one box must not stop the others */ } } };
   const relay = initiateDappRelay(({ client, status }) => {
@@ -40,7 +48,7 @@ export function connect(onChange, { fresh = false } = {}) {
   }, existing ? { existingCredentials: existing } : {});
   me.relay = relay; me.uri = relay.uri; me.qrUri = relay.qrUri;
   mgr.attachRelay(relay);
-  if (existing && stored.paths?.length) { try { mgr.restoreSessionPaths(stored.paths); } catch { /* wallet_ready will refill */ } }
+  if (existing && stored?.paths?.length) { try { mgr.restoreSessionPaths(stored.paths); } catch { /* wallet_ready will refill */ } }
   mgr.on('walletready', () => set('ready'));
   mgr.on('disconnect', () => { set('pairing'); });
   mgr.on('reconnecting', () => { if (me.state === 'ready') set('lost'); });

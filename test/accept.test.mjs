@@ -240,3 +240,26 @@ test('walletCoins: a coin at change index 100 (a well-used wallet) is found with
   assert.deepEqual(found.map((c) => c.satoshis), [26000n]);
   assert.equal(found.failed, 0);
 });
+
+test('timeouts: a wallet that never answers is aborted in the library and nothing is sent', async () => {
+  const { LIMITS } = await import('../web/accept.js');
+  const { p, sent } = net(); const m = mgr(); let signal;
+  m.signTransaction = (req, opts) => { signal = opts?.signal; return new Promise(() => {}); };
+  const old = LIMITS.sign; LIMITS.sign = 30;
+  try { await bad(acceptPact({ pact, keyW: kW, mgr: m, provider: p }), /did not answer in time.*Nothing was sent/s); } finally { LIMITS.sign = old; }
+  assert.ok(signal, 'an abort signal was passed to the wallet request');
+  assert.equal(signal.aborted, true);
+  assert.equal(sent.length, 0);
+});
+
+test('timeouts: a broadcast without an answer says the transaction may have been sent, with the txid, and is not repeated', async () => {
+  const { LIMITS } = await import('../web/accept.js');
+  const { p, sent } = net(); let calls = 0;
+  p.sendRawTransaction = (hex) => { calls++; sent.push(hex); return new Promise(() => {}); };
+  const old = LIMITS.send; LIMITS.send = 30;
+  try { await bad(acceptPact({ pact, keyW: kW, mgr: mgr(), provider: p }), /may have been sent already.*[0-9a-f]{64}/s); } finally { LIMITS.send = old; }
+  assert.equal(calls, 1);
+  const txid = binToHex(txidOf(sent[0]));
+  const q = net(); q.p.sendRawTransaction = () => new Promise(() => {}); LIMITS.send = 30;
+  try { await assert.rejects(acceptPact({ pact, keyW: kW, mgr: mgr(), provider: q.p }), (e) => e.message.includes(txid)); } finally { LIMITS.send = old; }
+});

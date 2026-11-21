@@ -114,3 +114,21 @@ test('routes: trailing punctuation is stripped, unknown or empty paths fall back
   ok('#/pact/abc.', '/pact/abc'); ok('#/pact/abc),', '/pact/abc'); ok('#/pact/abc?!', '/pact/abc'); ok('#/pact/abc\u201d', '/pact/abc');
   no('#/pact/'); no('#/pact/.'); no('#/foo'); no('#/pact/a b'); no('#/pact/a/b'); no('#/pact/<script>');
 });
+
+test('wallet: "Use another wallet" wipes the stored session first; a normal reconnect keeps it', async () => {
+  const { storedCredentials } = await import('../web/wallet.js');
+  const session = { privateKey: 'k', secret: 's', walletPublicKey: 'w', paths: [] };
+  let cleared = 0;
+  const m = { loadStoredSession: () => (cleared ? null : session), clearStoredSession: () => { cleared++; } };
+  const same = storedCredentials(m, false);
+  assert.equal(cleared, 0);
+  assert.deepEqual(same.existing, { privateKey: 'k', secret: 's', walletPublicKey: 'w' });
+  const fresh = storedCredentials(m, true);
+  assert.equal(cleared, 1);
+  assert.equal(fresh.existing, undefined);
+  assert.equal(fresh.stored, null);
+  // nothing stored at all
+  assert.equal(storedCredentials({ loadStoredSession: () => null, clearStoredSession() {} }, false).existing, undefined);
+  // a manager whose clear call throws must still give a fresh pairing
+  assert.equal(storedCredentials({ loadStoredSession: () => session, clearStoredSession() { throw new Error('x'); } }, true).existing, undefined);
+});

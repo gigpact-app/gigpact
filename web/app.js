@@ -55,6 +55,22 @@ let usdRate = null;
 const rateReady = fetch('https://api.coinbase.com/v2/prices/BCH-USD/spot').then((r) => r.json()).then((j) => { const v = Number(j?.data?.amount); if (v > 0) usdRate = v; }).catch(() => {});
 const localInput = (d) => { const z = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; };
 
+// Key backup panel. The key lives only in this browser's storage, so a closed private window, a cleared site or another browser
+// (for example the in-app browser of a chat app) loses it for good. who = 'organizer' | 'worker'.
+function backupPanel(sk, who) {
+  const b = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy backup key');
+  b.addEventListener('click', () => copy(sk, b));
+  const worker = who === 'worker';
+  return h('div', { class: 'panel' }, h('h2', {}, worker ? 'Back up your worker key' : 'Back up your organizer key'),
+    h('p', { class: 'sub' }, worker
+      ? 'This key is stored only in this browser. If this window is closed, its data cleared, or the pact is opened in another browser, the key is not there and you cannot claim your fee. Copy it now and keep it somewhere safe (for example a note).'
+      : 'This key is stored only in this browser. If this window is closed or its data cleared, the key is gone and the money cannot be taken back. Copy it now and keep it somewhere safe (for example a note).'),
+    h('div', { class: 'addr' }, sk), h('div', { class: 'row' }, b),
+    h('p', { class: 'note' }, worker
+      ? 'Keep it private. With it, the pact can be accepted, waived or claimed on your side. A claimed fee always goes to your payout address.'
+      : 'Keep it private. With it, the pact can be cancelled; the money would go to your refund address, not to the holder of the key.'));
+}
+
 function newPact() {
   const err = h('p', { class: 'err', role: 'alert' });
   const f = { name: h('input', { id: 'name', maxlength: 60, placeholder: 'Saturday event, Main Hall', autocomplete: 'off' }),
@@ -98,7 +114,8 @@ function newPact() {
         h('p', { class: 'sub' }, 'They open it, enter their refund address, and get the address to fund. Nothing is locked until they pay. After they fund, they send you back a different link. Open that one to accept.'),
         h('div', { class: 'addr' }, url),
         h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small', type: 'button' }, 'Copy link'); b.addEventListener('click', () => copy(url, b)); return b; })(), link(`#/pact/${code}`, 'Open it here', 'btn small ghost')),
-        h('p', { class: 'note' }, 'Your signing key for this pact is stored in this browser only. Do not clear this site’s data until the pact is settled. Key backup is not built yet.')));
+        h('p', { class: 'note' }, 'Your signing key for this pact is stored in this browser only. Do not clear this site’s data until the pact is settled, and open the organizer’s reply link in this same browser.'),
+        backupPanel(binToHex(sk), 'worker')));
       btn.textContent = 'Create another';
     } catch (x) { err.textContent = x instanceof UiError ? x.message : `Something went wrong: ${x.message}`; btn.textContent = 'Create pact request'; }
     btn.disabled = false;
@@ -196,7 +213,8 @@ async function pactScreen(code) {
   const markDone = (r) => { try { localStorage.setItem(doneKey, JSON.stringify({ path: r.path, txid: r.txid, to: r.to })); } catch { /* display only */ } };
   let wp = null, cp = null, sp = null, sp2 = null, kb = null;
   // The funding box (address + copy button) is only useful before the money moved on; after that it could lead to a second payment.
-  function fundGone(gone) { if (role === 'organizer') roleBox.hidden = gone; }
+  // gone = the pact moved on, hide the whole box; funded = the funding is on the network, hide only the address and the copy button.
+  function fundGone(gone, funded = false) { if (role === 'organizer') { roleBox.hidden = gone; fundPay.hidden = funded; fundDone.hidden = !funded; fundTitle.textContent = funded ? 'Pact funded' : 'Fund this pact'; } }
   // Once the pact is finished (settled, cancelled, or the address already used) the organizer key has nothing left to protect.
   const keyDone = (done) => { if (kb) kb.hidden = done; };
   async function refresh() {
@@ -219,8 +237,8 @@ async function pactScreen(code) {
       if (fx.length === 1) {
         // Accept spends the funding output; a worker who accepts on a 0-conf funding could be fooled by a replaced payment. Wait for 1 confirmation.
         let conf = null; try { conf = confirmedFrom(await provider.performRequest('blockchain.scripthash.listunspent', binToHex(sha256.hash(chain.locks.funded).reverse())), fx[0].txid, fx[0].vout); } catch { conf = null; }
-        if (conf === false) { setState('Waiting for 1 confirmation', 'warn', `The funding payment is on the network (${fx[0].txid}:${fx[0].vout}) but not in a block yet. The worker can accept after the first confirmation, usually within about 10 minutes.`); wp?.setFunded(false, false, false, true); fundGone(false); return; }
-        setState('Funded', 'ok', `Funding found on chain: ${fx[0].txid}:${fx[0].vout}${us.length > 1 ? ` (${us.length - 1} other small output(s) at the address are ignored)` : ''}`); wp?.setFunded(true); fundGone(false);
+        if (conf === false) { setState('Waiting for 1 confirmation', 'warn', `The funding payment is on the network (${fx[0].txid}:${fx[0].vout}) but not in a block yet. The worker can accept after the first confirmation, usually within about 10 minutes.`); wp?.setFunded(false, false, false, true); fundGone(false, true); return; }
+        setState('Funded', 'ok', `Funding found on chain: ${fx[0].txid}:${fx[0].vout}${us.length > 1 ? ` (${us.length - 1} other small output(s) at the address are ignored)` : ''}`); wp?.setFunded(true); fundGone(false, true);
       }
       else if (us.length === 0 && doneMark()) { const d = doneMark(); if (d.path === 'F2') setState('Cancelled', 'warn', `The organizer cancelled before the worker accepted. The money went back to ${d.to}. Transaction ${d.txid}. Do not pay this pact again.`); else setState('Settled', 'ok', `This pact was settled (${d.path}). Transaction ${d.txid}. The money went to ${d.to}.`); wp?.setFunded(false, true, true); fundGone(true); keyDone(true); return; }
       else if (us.length === 0) {
@@ -234,14 +252,7 @@ async function pactScreen(code) {
   }
   // Key backup (organizer) and restore (a browser without the key). The key lives only in this browser's storage, so a closed private
   // window or cleared site data loses it for good: without it the money at the funding address cannot be taken back.
-  const keyBox = () => {
-    const b = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy backup key');
-    b.addEventListener('click', () => copy(mineV.sk, b));
-    return h('div', { class: 'panel' }, h('h2', {}, 'Back up your organizer key'),
-      h('p', { class: 'sub' }, 'This key is stored only in this browser. If this window is closed or its data cleared, the key is gone and the money cannot be taken back. Copy it now and keep it somewhere safe (for example a note).'),
-      h('div', { class: 'addr' }, mineV.sk), h('div', { class: 'row' }, b),
-      h('p', { class: 'note' }, 'Keep it private. With it, the pact can be cancelled; the money would go to your refund address, not to the holder of the key.'));
-  };
+  const keyBox = () => backupPanel(role === 'worker' ? mineW.sk : mineV.sk, role);
   const restoreBox = () => {
     const input = h('input', { placeholder: 'Backup key (64 characters)', autocomplete: 'off', spellcheck: 'false' });
     const err = h('p', { class: 'err', role: 'alert' });
@@ -251,28 +262,35 @@ async function pactScreen(code) {
       const k = input.value.trim().toLowerCase();
       if (!/^[0-9a-f]{64}$/.test(k)) { err.textContent = 'The backup key is 64 characters (0-9 and a-f).'; return; }
       let pk; try { pk = binToHex(pubOf(hexToBin(k))); } catch { err.textContent = 'That is not a valid key.'; return; }
-      if (pk !== pkVhex) { err.textContent = 'This key does not belong to this pact.'; return; }
-      if (!store.put(pkVhex, k, { role: 'V' })) { err.textContent = 'This browser would not let the app save the key. Allow site storage and try again.'; return; }
+      const restoredRole = pk === pkVhex ? 'V' : pk === pkW ? 'W' : null;
+      if (!restoredRole) { err.textContent = 'This key does not belong to this pact.'; return; }
+      if (!store.put(pk, k, { role: restoredRole })) { err.textContent = 'This browser would not let the app save the key. Allow site storage and try again.'; return; }
       route();
     });
-    return h('div', { class: 'panel' }, h('h2', {}, 'Are you the organizer?'), h('p', { class: 'sub' }, 'If you saved the organizer backup key of this pact, paste it here to get your controls back.'), input, err, h('div', { class: 'row' }, b));
+    return h('div', { class: 'panel' }, h('h2', {}, 'Do you have a backup key?'), h('p', { class: 'sub' }, 'If you saved the backup key of this pact (organizer or worker), paste it here to get your controls back.'), input, err, h('div', { class: 'row' }, b));
   };
   const sendBack = `${location.origin}${location.pathname}#/pact/${code}`;
+  // Funding box of the organizer. The address and the copy button are only shown while nothing was paid: once the funding is on the
+  // network a second payment would sit next to the first one, and the worker's accept would be refused until one is cancelled.
+  const fundTitle = h('h2', {}, 'Fund this pact');
+  const fundPay = h('div', {}, h('p', { class: 'sub' }, `Send exactly ${fmtBch(p.F)} BCH to this address, in one payment, from any wallet:`),
+    h('div', { class: 'addr' }, fundAddr), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small', type: 'button' }, 'Copy address'); b.addEventListener('click', () => copy(fundAddr, b)); return b; })()),
+    h('p', { class: 'note' }, 'Send it as ONE payment of the exact amount. Anything else at this address is not counted as the fee.'));
+  const fundDone = h('p', { class: 'note', hidden: true }, 'The funding was found. Do not pay this pact again: a second payment would be locked too.');
   const roleBox = role === 'organizer'
-    ? h('div', { class: 'panel' }, h('h2', {}, 'Fund this pact'), h('p', { class: 'sub' }, `Send exactly ${fmtBch(p.F)} BCH to this address, in one payment, from any wallet:`),
-        h('div', { class: 'addr' }, fundAddr), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small', type: 'button' }, 'Copy address'); b.addEventListener('click', () => copy(fundAddr, b)); return b; })()),
-        h('p', { class: 'note' }, 'Send it as ONE payment of the exact amount. Anything else at this address is not counted as the fee. After funding, send the worker this same page link so they can accept:'),
+    ? h('div', { class: 'panel' }, fundTitle, fundPay, fundDone,
+        h('p', { class: 'note' }, 'After funding, send the worker this same page link so they can accept:'),
         h('div', { class: 'addr' }, sendBack), h('div', { class: 'row' }, (() => { const b = h('button', { class: 'btn small ghost', type: 'button' }, 'Copy link for the worker'); b.addEventListener('click', () => copy(sendBack, b)); return b; })()))
     : role === 'worker'
       ? (wp = workerPanel({ pact: p, keyW: hexToBin(mineW.sk), onDone: () => refresh() })).el
-      : h('div', {}, h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here.')), restoreBox());
+      : h('div', {}, h('div', { class: 'panel' }, h('h2', {}, 'Pact overview'), h('p', { class: 'sub' }, 'This browser holds no key for this pact, so it is read-only here. If you are the worker, open this link in the browser where you created the request, or restore your backup key below.')), restoreBox());
   // A3 only moves the money to the next stage; every other path ends the pact, so only those leave a marker.
   const finished = (r) => { if (r?.path !== 'A3') markDone(r); refresh(); };
   const rk = role === 'viewer' ? null : hexToBin((role === 'organizer' ? mineV : mineW).sk);
   if (role !== 'viewer') sp = settlePanel({ pact: p, role, key: rk, onDone: finished });
   sp2 = settlePanel({ pact: p, role, stage: 'requested', key: rk, onDone: finished });
   if (role === 'organizer') cp = cancelPanel({ pact: p, keyV: hexToBin(mineV.sk), onDone: (r) => { if (r?.txid) markDone({ path: 'F2', txid: r.txid, to: r.refundTo }); refresh(); } });
-  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el] : []), sp2.el, ...(cp ? [(kb = keyBox()), cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
+  wrap.append(h('div', { class: 'grid2' }, h('div', {}, roleBox, ...(sp ? [sp.el] : []), sp2.el, ...(role !== 'viewer' ? [(kb = keyBox())] : []), ...(cp ? [cp.el] : []), h('p', { style: 'margin-top:14px' }, statusEl), detail,
     h('p', { class: 'note' }, 'Funding address of this pact: ', h('code', {}, fundAddr.replace(/^[a-z]+:/, '').slice(0, 14) + '…')), payBox), pass(p, { state: 'Pact', stateClass: '', seed: fundAddr })));
   fillEta(); refresh(); timers.push(setInterval(refresh, 20000));
 }

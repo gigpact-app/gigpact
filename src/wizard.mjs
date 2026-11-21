@@ -11,7 +11,7 @@
 //   * The wallet is not trusted: verifySigned() re-derives the transaction we asked for, and refuses anything that
 //     differs by even one byte outside the sponsor unlocking scripts, then runs the full script check offline.
 //
-// Evidence level of this module: R-VM / regtest with a software "wallet". Real-wallet mainnet runs (Paytaca): F1, A1, F2, A3 (docs/evidence/M1-M3).
+// Evidence level of this module: R-VM / regtest with a software "wallet". Real-wallet mainnet runs (Paytaca): F1, F2, A1, A2, A3, C1, C3, C4 (docs/evidence); C2, D1, D2, D3, D5, D6 by script with a test arbiter key; A4 and D4 on regtest only.
 import { binToHex, hexToBin, hash160, sha256, decodeTransactionBch, encodeTransactionBch, encodeLockingBytecodeP2pkh, createVirtualMachineBch2026, hashTransactionUiOrder } from '@bitauth/libauth';
 import { SpendError } from './errors.mjs';
 import { buildTx, inspectTx, SIGHASH_61 } from './spend.mjs';

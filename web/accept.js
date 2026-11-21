@@ -2,7 +2,7 @@
 // so the same code runs in the tests with a software wallet and a fake network.
 //
 // Evidence level of the code in this file: tests with a software wallet (test/accept.test.mjs). Real-wallet mainnet runs so far:
-// F1, A1, F2, A3 (docs/evidence/M1-M3). The other paths have only run with a software wallet.
+// F1, F2, A1, A2, A3, C1, C3, C4 (docs/evidence). C2, D1, D2, D3, D5, D6 were run by script with a test arbiter key; A4 and D4 on regtest only.
 import { SignatureTemplate } from 'cashscript';
 import { encodeLockingBytecodeP2pkh, hash160, lockingBytecodeToCashAddress } from '@bitauth/libauth';
 import { planSpend, changeFloor, PATHS } from '../src/spend.mjs';
@@ -16,12 +16,21 @@ const CONCURRENCY = 8;
 const FEE_ALLOWANCE = 3000n;   // rough upper bound for the F1 fee, used only to pre-select sponsor coins (buildTx fits the exact fee)
 
 // Ask the wallet to sign. A wallet that never answers must not freeze the screen; a wallet that refuses rejects the promise.
-const SIGN_TIMEOUT_MS = 180_000;
+// When the time is up the request is also aborted in the library, so a late answer cannot arrive after the person was told "nothing was sent".
+export const LIMITS = { sign: 180_000, send: 60_000 };
 async function askWallet(mgr, request) {
-  let timer;
-  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new UiError('Your wallet did not answer in time. Open the wallet app and try again. Nothing was sent.')), SIGN_TIMEOUT_MS); });
-  try { return await Promise.race([mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths }), timeout]); }
+  let timer; const ctl = new AbortController();
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => { ctl.abort(); reject(new UiError('Your wallet did not answer in time. Open the wallet app and try again. Nothing was sent.')); }, LIMITS.sign); });
+  try { return await Promise.race([mgr.signTransaction({ transaction: request.transaction, inputPaths: request.inputPaths }, { signal: ctl.signal }), timeout]); }
   catch (x) { if (x instanceof UiError) throw x; throw new UiError(`Your wallet did not complete the request (${String(x?.message || x).slice(0, 120)}). Nothing was sent.`); }
+  finally { clearTimeout(timer); }
+}
+// Broadcast once, with a time limit. The send is never repeated on another server: if no answer comes, the transaction may still have
+// reached the network, so the person is told to look at the explorer instead of signing a second one.
+async function sendOnce(provider, v) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new UiError(`The network did not answer in time. The transaction may have been sent already: check the explorer for ${v.txid} before trying again.`)), LIMITS.send); });
+  try { return await Promise.race([provider.sendRawTransaction(v.hex), timeout]); }
   finally { clearTimeout(timer); }
 }
 // Names go into the wallet's prompt as plain text; keep markup characters out in case the wallet renders them.
@@ -108,7 +117,7 @@ export async function acceptPact({ pact, keyW, mgr, provider, onStep = () => {} 
   const response = await askWallet(mgr, request);
   const v = verifySigned(expected, response, { derive });
   onStep('Sending to the network…');
-  const sent = await provider.sendRawTransaction(v.hex);
+  const sent = await sendOnce(provider, v);
   if (typeof sent === 'string' && sent.toLowerCase() !== v.txid) throw new UiError(`The network reported another transaction id (${sent}) than the one we signed (${v.txid}). Check the explorer before trying again.`);
   return { txid: v.txid, fee: v.fee, size: v.size, hex: v.hex, accepted: addressOf(chain.locks.accepted) };
 }
@@ -136,7 +145,7 @@ export async function cancelPact({ pact, keyV, mgr, provider, onStep = () => {} 
   const response = await askWallet(mgr, request);
   const v = verifySigned(expected, response, { derive });
   onStep('Sending to the network…');
-  const sent = await provider.sendRawTransaction(v.hex);
+  const sent = await sendOnce(provider, v);
   if (typeof sent === 'string' && sent.toLowerCase() !== v.txid) throw new UiError(`The network reported another transaction id (${sent}) than the one we signed (${v.txid}). Check the explorer before trying again.`);
   return { txid: v.txid, fee: v.fee, size: v.size, hex: v.hex, returned: u.satoshis, refundTo: addressOf(pact.lockV), remaining: held.length - 1 };
 }
@@ -190,7 +199,7 @@ export async function settlePact({ pact, path, key, mgr, provider, onStep = () =
   const v = verifySigned(expected, response, { derive });
   onStep('Sending to the network…');
   let sent;
-  try { sent = await provider.sendRawTransaction(v.hex); } catch (x) {
+  try { sent = await sendOnce(provider, v); } catch (x) {
     const m = String(x?.message || x);
     if (/BIP68/i.test(m)) throw new UiError('Not yet: the money has not waited long enough at this stage. Try again later. Nothing was sent.');
     if (/non-?final/i.test(m)) throw new UiError('Not yet: the event end block has not been reached. Try again later. Nothing was sent.');

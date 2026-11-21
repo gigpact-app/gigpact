@@ -72,9 +72,9 @@ Levels are kept separate on purpose.
 ## Honest limits
 
 - Funding is a plain send from any wallet. Sending a wrong amount cannot be accepted by the contract (it takes exactly the fee) and the money can only be taken back with the organizer's key.
-- The organizer's key lives in the browser (localStorage). The app offers a backup box; if you lose the key and the browser data, the funds at that stage are locked. One test pact on mainnet is locked this way (30,000 sat, see the evidence file).
+- The organizer's key lives in the browser (localStorage). The app offers a backup box and a restore box. Without the key the organizer can neither cancel nor pay: money sent in a wrong amount, or money the worker never accepts, stays locked at the funding address. When the amount is right the worker can still accept and later claim after the event. One test pact on mainnet is locked this way (30,000 sat, see the evidence file).
 - The "Settled" and "Cancelled" displays are markers kept per browser. Another browser shows the chain state: a pact address that already received and spent money is shown as "Already used" (no pay box). Strays (small payments sent to a pact address by anyone) are ignored when the app decides the stage.
-- The worker's signing key is also kept only in the browser (the organizer gets a backup box). A worker who loses it cannot waive or claim; the collect step (C1) needs no key and is offered to any browser once the waiting period is over.
+- The worker's signing key is also kept in the browser. The worker gets the same backup box (shown when the request is created) and a restore box on the pact page. A worker who loses the key and has no backup cannot accept, waive or claim; the collect step (C1) needs no key and is offered to any browser once the waiting period is over.
 - The silent-organizer path (claim after the event end, then collect after 432 blocks) has run end to end on mainnet with a real wallet: A3 in [M3](docs/evidence/M3-mainnet-A3.md), C1 in [M8](docs/evidence/M8-mainnet-C1.md).
 - Time is counted in blocks, not clock time. The dates in the app are estimates (about 10 minutes per block), so the 432-block wait is about 3 days, give or take a few hours.
 - No audit. Contract sources are frozen for the hackathon.
