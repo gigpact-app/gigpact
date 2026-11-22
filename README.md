@@ -11,6 +11,7 @@ Built solo for BCH BLAZE 2026 (DoraHacks). Prototype on Bitcoin Cash **mainnet**
 - The Gig Score (Media Track): a playable explainer, 16 keys for 16 contract paths: https://gigpact-app.github.io/gigpact/score/ (30-second video: https://youtu.be/qm_PvhxpErs)
 - Mainnet demo video (narrated, AI voice-over, 2:10): https://youtu.be/Yx3IygXy7HY
 - Write-up (Medium): https://medium.com/@ozan.t1992/gigpact-a-payment-guarantee-for-gig-workers-built-on-bitcoin-cash-cd917508b65f
+- XO template (BLAZE XO bounties): [xo/README.md](xo/README.md)
 - Pre-hackathon declaration: [docs/DECLARATION.md](docs/DECLARATION.md)
 - Before / After: [docs/BEFORE-AFTER.md](docs/BEFORE-AFTER.md)
 - Security and limits (reviews, findings, what a lost key does): [docs/SECURITY-LIMITS.md](docs/SECURITY-LIMITS.md)
@@ -96,6 +97,10 @@ Open the page and create a request as the worker (minimum fee 10,000 sat). Open 
 
 `web/public/score/` is a separate page that teaches the contract by playing it. It is a 16-key instrument: each key is one real spend path, with recorded music for its mood, a small stage where the organizer, the worker and the arbiter act it out, and a link to the real mainnet transaction as proof. Every key shows how it was proven (real wallet, script run on mainnet, or test chain only). It does not change the app. The music was composed with AI assistance (Claude) and rendered with the GeneralUser GS SoundFont (see `web/public/score/audio/CREDITS.md`).
 
+## XO template (BLAZE XO bounties)
+
+`xo/` holds the accepted-stage pact (pay, waive, claim) expressed as an XO template, built with `@xo-cash/engine` and run on BCH mainnet with small amounts. The template id is `93e55492c9a7a5a9aded346e92479e67e0562815e7bfeae7b6cdbb2fdaef5996`. Three mainnet transactions were built from XO invitations and inspected in the XO debug tool: a fund and a follow-up pay from Node, and a fund from the debug tool in the browser. Waive and claim are covered by an offline VM test, not by a mainnet transaction. Only the accepted stage is migrated; the other stages (funded, requested, dispute) stay in CashScript. The template, invitations, reproduction steps, screenshots and honest limits are in [xo/README.md](xo/README.md). This folder does not change the app or the frozen contracts.
+
 ## Layout
 
 - `contracts/` four CashScript contracts (Funded, Accepted, Requested, Dispute), compiled with cashc 0.14.0
@@ -103,6 +108,7 @@ Open the page and create a request as the worker (minimum fee 10,000 sat). Open 
 - `web/` the browser app (Vite, vanilla JS)
 - `test/` contract VM, library, web and regtest tests
 - `docs/` boundaries, evidence, declaration, before/after
+- `xo/` XO template for the accepted-stage pact, invitations, scripts, evidence
 
 ## License
 

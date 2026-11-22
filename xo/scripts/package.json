@@ -1,0 +1,11 @@
+{
+ "name": "gigpact-xo-spike",
+ "private": true,
+ "type": "module",
+ "dependencies": {
+  "@xo-cash/engine": "0.1.1-next.18230317763",
+  "@xo-cash/templates": "0.0.12",
+  "@xo-cash/utils": "0.0.12",
+  "@bitauth/libauth": "3.1.0-next.8"
+ }
+}
